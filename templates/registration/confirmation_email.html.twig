@@ -1,0 +1,38 @@
+{% block body %}
+    <h1>Hi! Please confirm your email!</h1>
+
+    <p>
+        Please confirm your email address by clicking the following link: <br><br>
+        <a href="{{ signedUrl|raw }}">Confirm my Email</a>.
+        This link will expire in {{ expiresAtMessageKey|trans(expiresAtMessageData, 'VerifyEmailBundle') }}.
+    </p>
+
+    <p>
+        Cheers!
+    </p>
+{% endblock %}
+{% block javascripts %}
+    <script >
+        window.onload = ()=>{
+            alert('Bonjour depuis JavaScript !');
+            const response = await fetch('/api/register', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            });
+
+            const responseData = await response.json();
+
+            // Extrait le token de la réponse JSON
+            const token = responseData.token;
+
+
+            console.log("==============================",token);
+
+            // Stocke le token dans le local storage pour une utilisation ultérieure
+            localStorage.setItem('jwtToken', token);
+        }
+    </script>
+{% endblock %}
