@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PhotoImmoRepository::class)]
 #[ApiResource]
-class PhotoImmo
+class PhotoImmo implements \JsonSerializable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -28,7 +28,7 @@ class PhotoImmo
 
     public function getNom(): ?string
     {
-        return $this->nom;
+        return $this->nom ? '/public/uploads/images/' . $this->nom : null;
     }
 
     public function setNom(string $nom): static
@@ -48,5 +48,12 @@ class PhotoImmo
         $this->bien = $bien;
 
         return $this;
+    }
+
+    public function jsonSerialize() {
+        return [
+            'id' => $this->id,
+            'nom' => $this->nom
+        ];
     }
 }

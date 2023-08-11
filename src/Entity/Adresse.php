@@ -37,7 +37,7 @@ class Adresse implements \JsonSerializable
 
     public function __construct()
     {
-        $this->bien_immo = new ArrayCollection();
+        // $this->bien_immo = new ArrayCollection();
     }
 
     public function getId(): ?int

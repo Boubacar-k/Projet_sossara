@@ -21,6 +21,11 @@ use App\Entity\User;
 #[Route('/api', name: 'api_')]
 class MessageController extends AbstractController
 {
+    private $entityManager;
+    private $messageRepository;
+    private $userRepository;
+    private $participantRepository;
+    private $publisher;
     const ATTRIBUTES_TO_SERIALIZE = ['id','content','createdAt','updateAt', 'is_read'];
     public function __construct(EntityManagerInterface $entityManager,MessageRepository $messageRepository,UserRepository $userRepository,
     ParticipantRepository $participantRepository,PublisherInterface $publisher){
@@ -43,7 +48,7 @@ class MessageController extends AbstractController
 
         array_map(function ($message){
             $message->setMine(
-                $message->getUtilisateur()->getId() === $this->getUser()->getId() ? true:false
+                $message->getUtilisateur()->getId() === $this->getUser() ? true:false
             );
         },$messages);
 
@@ -67,7 +72,7 @@ class MessageController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        $content = $data['content'];
+        $content = trim($data['content']);
 
         $message = new Message();
 

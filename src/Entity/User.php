@@ -28,29 +28,23 @@ use App\Controller\RegistrationController;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
-#[ApiResource (operations: [
-    new Get(),
-    new Post()
-    ],
-    normalizationContext: ['groups' => ['user:read']],
-    denormalizationContext: ['groups' => ['user:create', 'user:update']],
-)]
+#[ApiResource]
 class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSerializable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?string $nom = null;
 
 
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\NotBlank]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     protected ?string $email = null;
 
     #[ORM\Column(type: 'json')]
@@ -61,52 +55,47 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
      */
     #[ORM\Column]
     #[Assert\NotBlank]
-    #[Groups(['user:create', 'user:update'])]
+    // #[Groups(['user:create', 'user:update'])]
     private ?string $password = null;
 
     #[ORM\Column(type: 'boolean')]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     private $isVerified = false;
 
     #[ORM\Column(nullable: true,type: Types::DATE_MUTABLE)]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?\DateTimeInterface $dateNaissance = null;
 
-    #[ORM\Column(length: 15)]
+    #[ORM\Column(length: 15, unique: true)]
     // #[Groups(['user:read', 'user:create', 'user:update'])]
-    private ?string $telephone = null;
+    private ?string $telephone = "";
 
     #[ORM\Column]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?bool $is_certified = null;
 
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: BienImmo::class)]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private Collection $bienImmos;
 
     #[ORM\OneToMany(mappedBy: 'bien_immo', targetEntity: Transaction::class)]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private Collection $transactions;
 
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Paiement::class)]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private Collection $paiements;
 
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Rdv::class)]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private Collection $rdvs;
 
-    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Notification::class)]
-    #[Groups(['user:read'])]
-    private Collection $notifications;
-
-
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Commentaire::class)]
-    #[Groups(['user:read'])]
+    // #[Groups(['user:read'])]
     private Collection $commentaires;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['user:read', 'user:create', 'user:update'])]
+    // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?string $photo = null;
 
     #[ORM\Column]
@@ -127,6 +116,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Candidature::class)]
     private Collection $candidatures;
 
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Probleme::class)]
+    private Collection $problemes;
+
 
     public function __construct()
     {
@@ -135,11 +127,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         $this->transactions = new ArrayCollection();
         $this->paiements = new ArrayCollection();
         $this->rdvs = new ArrayCollection();
-        $this->notifications = new ArrayCollection();
         $this->commentaires = new ArrayCollection();
         $this->messages = new ArrayCollection();
         $this->participants = new ArrayCollection();
         $this->candidatures = new ArrayCollection();
+        $this->problemes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -291,7 +283,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     {
         if (!$this->transactions->contains($transaction)) {
             $this->transactions->add($transaction);
-            $transaction->setBienImmo($this);
+            // $transaction->setBien($this);
         }
 
         return $this;
@@ -301,8 +293,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     {
         if ($this->transactions->removeElement($transaction)) {
             // set the owning side to null (unless already changed)
-            if ($transaction->getBienImmo() === $this) {
-                $transaction->setBienImmo(null);
+            if ($transaction->getBien() === $this) {
+                $transaction->setBien(null);
             }
         }
 
@@ -363,36 +355,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             // set the owning side to null (unless already changed)
             if ($rdv->getUtilisateur() === $this) {
                 $rdv->setUtilisateur(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Notification>
-     */
-    public function getNotifications(): Collection
-    {
-        return $this->notifications;
-    }
-
-    public function addNotification(Notification $notification): static
-    {
-        if (!$this->notification->contains($notification)) {
-            $this->notification->add($notification);
-            $notification->setUtilisateur($this);
-        }
-
-        return $this;
-    }
-
-    public function removeNotification(Notification $notification): static
-    {
-        if ($this->notification->removeElement($notification)) {
-            // set the owning side to null (unless already changed)
-            if ($notification->getUtilisateur() === $this) {
-                $notification->setUtilisateur(null);
             }
         }
 
@@ -460,7 +422,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
 
     public function getPhoto(): ?string
     {
-        return $this->photo;
+        return $this->photo ? '/public/uploads/images/' . $this->photo : null;
     }
 
     public function setPhoto(?string $photo): static
@@ -615,6 +577,36 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             // set the owning side to null (unless already changed)
             if ($candidature->getUtilisateur() === $this) {
                 $candidature->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Probleme>
+     */
+    public function getProblemes(): Collection
+    {
+        return $this->problemes;
+    }
+
+    public function addProbleme(Probleme $probleme): static
+    {
+        if (!$this->problemes->contains($probleme)) {
+            $this->problemes->add($probleme);
+            $probleme->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProbleme(Probleme $probleme): static
+    {
+        if ($this->problemes->removeElement($probleme)) {
+            // set the owning side to null (unless already changed)
+            if ($probleme->getUtilisateur() === $this) {
+                $probleme->setUtilisateur(null);
             }
         }
 

@@ -22,8 +22,22 @@ class Candidature implements \JsonSerializable
     private ?BienImmo $bien = null;
 
     #[ORM\Column(nullable: true)]
-    private ?bool $is_accepted = null;
+    private ?bool $is_accepted = false;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $createdAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $is_cancel = false;
+
+    public function __construct(){
+        $this->createdAt = new \DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+    
     public function getId(): ?int
     {
         return $this->id;
@@ -69,8 +83,46 @@ class Candidature implements \JsonSerializable
         return [
             'id' => $this->id,
             'bien' => $this->bien,
+            'createdAt' => $this->createdAt,
+            'updateAt' => $this->updatedAt,
             'utilisateur' => $this->utilisateur,
             'is_accepted' => $this->is_accepted
         ];
+    }
+
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(?\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    public function isIsCancel(): ?bool
+    {
+        return $this->is_cancel;
+    }
+
+    public function setIsCancel(?bool $is_cancel): static
+    {
+        $this->is_cancel = $is_cancel;
+
+        return $this;
     }
 }

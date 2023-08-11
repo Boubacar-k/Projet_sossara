@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Document;
+use App\Entity\PhotoDocument;
 use App\Form\RegistrationFormType;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
@@ -25,6 +26,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
+use App\Service\FileUploader;
 
 #[Route('/api', name: 'api_')]
 class RegistrationController extends AbstractController
@@ -45,62 +47,65 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register', methods: ['POST'],)]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, UserAuthenticatorInterface $userAuthenticator, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, UserAuthenticatorInterface $userAuthenticator, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
     {
         $user = new User();
         $document = new Document();
 
         $data = json_decode($request->getContent(), true);
 
-        $user->setNom($data['nom']);
-        $user->setEmail($data['email']);
-        if (isset($data['roles']) && is_array($data['roles'])){
-            $existingRoles = 'ROLE';
+        $user->setNom(trim($data['nom']));
+        $user->setEmail(trim($data['email']));
+        if (isset($data['roles'])) {
             $newRoles = $data['roles'];
 
             $newRoles = trim($newRoles);
+        
+            if ($newRoles === 'PROPRIETAIRE') {
+                $user->setRoles(['ROLE_PROPRIETAIRE']);
+            } elseif ($newRoles === 'AGENCE') {
+                $user->setRoles(['ROLE_AGENCE']);
+            }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
+                $user->setRoles(['ROLE_LOCATAIRE']);
+            } else {
 
-            $concatenatedRoles = $existingRoles.'_'.$newRoles;
-
-            $rolesArray = array_map('trim', $concatenatedRoles);
-
-            $user->setRoles($rolesArray);
+                return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
+            }
         }
-        $user->setPassword($userPasswordHasher->hashPassword($user,$data['password']));
+        $user->setPassword($userPasswordHasher->hashPassword($user,trim($data['password'])));
         $user->setDateNaissance(new \DateTime($data['dateNaissance']));
-        $user->setTelephone($data['telephone']);
-        // $user->setPhoto($data['photo_user']);
+        $user->setTelephone(trim($data['telephone']));
+
         $user->setIsCertified(false);
         $user->setIsVerified(false);
         $user->setCreatedAt(new \DateTimeImmutable());
         $user->setUpdateAt(new \DateTimeImmutable());
 
-        $document->setNumDoc($data['num_doc']);
-        $document->setNom($data['nom_doc']);
-        $document->setPhoto($data['photo']);
-        $document->setUtilisateur($user);
+        $document->setNumDoc(trim($data['num_doc']));
+        $document->setNom(trim($data['nom_doc']));
+        $images = $request->files->get('photo');
+        if ($images!=null) {
+            foreach ($images as $image){
+                $imageFileName = $fileUploader->upload($image);
+                
+                $photo = new PhotoDocument();
+                $photo->setNom($imageFileName);
+                $photo->setCreatedAt(new \DateTimeImmutable());
+                $photo->setUpdatedAt(new \DateTimeImmutable());
+                $document->addPhotoDocument($photo);
+                $entityManager->persist($photo);
+            }
+        }
         $user->addDocument($document);
-        // $roles[] = 'ROLE_AGENCE';
-        // if($user->getRoles()==$roles){
-            
-        // }
-
-    
-        // $user->setNom($request->request->get('nom'));
-        // $user->setEmail($request->request->get('email'));
-        // $user->setRoles(['ROLE_USER']);
-        // $user->setPassword($userPasswordHasher->hashPassword($user,$request->request->get('password')));
-        // $user->setDateNaissance(new \DateTime($request->request->get('dateNaissance')));
-        // $user->setTelephone(strval($request->request->get('telephone')));
-        // $user->setIsCertified(false);
-        // $user->setIsVerified(false);
 
         if ($request->getMethod() == Request::METHOD_POST){
+            $entityManager->getConnection()->beginTransaction();
             try {
 
                 $entityManager->persist($user);
                 $entityManager->persist($document);
                 $entityManager->flush();
+                $entityManager->commit();
             } catch (\Exception $e) {
                 $entityManager->rollback();
                 throw $e;
@@ -130,7 +135,7 @@ class RegistrationController extends AbstractController
 
     private function generateJwtToken(UserInterface $user): string
     {
-        $payload = ['username' => $user->getEmail(), 'roles' => $user->getRoles()];
+        $payload = ['username' => $user->getUserIdentifier(), 'roles' => $user->getRoles()];
         return $this->jwtEncoder->encode($payload);
     }
 

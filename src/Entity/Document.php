@@ -27,12 +27,13 @@ class Document
     #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'documents')]
     private Collection $users;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $photo = null;
+    #[ORM\OneToMany(mappedBy: 'document', targetEntity: PhotoDocument::class)]
+    private Collection $photoDocuments;
 
     public function __construct()
     {
         $this->users = new ArrayCollection();
+        $this->photoDocuments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -91,15 +92,50 @@ class Document
         return $this;
     }
 
-    public function getPhoto(): ?string
+    /**
+     * @return Collection<int, PhotoDocument>
+     */
+    public function getPhotoDocuments(): Collection
     {
-        return $this->photo;
+        return $this->photoDocuments;
     }
 
-    public function setPhoto(?string $photo): static
+    public function addPhotoDocument(PhotoDocument $photoDocument): static
     {
-        $this->photo = $photo;
+        if (!$this->photoDocuments->contains($photoDocument)) {
+            $this->photoDocuments->add($photoDocument);
+            $photoDocument->setDocument($this);
+        }
 
         return $this;
+    }
+
+    public function removePhotoDocument(PhotoDocument $photoDocument): static
+    {
+        if ($this->photoDocuments->removeElement($photoDocument)) {
+            // set the owning side to null (unless already changed)
+            if ($photoDocument->getDocument() === $this) {
+                $photoDocument->setDocument(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function jsonSerialize() {
+        $photos = [];
+        foreach ($this->photoDocuments as $photoDocument) {
+            $photos[] = [
+                'id' => $photoDocument->getId(),
+                'nom' => $photoDocument->getNom(),
+            ];
+        }
+        return [
+            'id' => $this->id,
+            'num_doc' => $this->num_doc,
+            'nom' => $this->nom,
+            'users' => $this->users,
+            'photoDocuments' => $photos
+        ];
     }
 }

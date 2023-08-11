@@ -62,15 +62,11 @@ class BienImmo implements \JsonSerializable
     #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Rdv::class)]
     private Collection $rdvs;
 
-    #[ORM\OneToMany(mappedBy: 'bienImmo', targetEntity: Notification::class)]
-    private Collection $notifications;
-
-
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     private ?Adresse $adresse = null;
 
     #[ORM\ManyToMany(targetEntity: Commodite::class, inversedBy: 'bienImmos')]
-    #[JoinTable(name: 'bienImmos_commodites')]
+    // #[JoinTable(name: 'bienImmos_commodites')]
     private Collection $commodites;
 
     #[ORM\Column]
@@ -103,13 +99,26 @@ class BienImmo implements \JsonSerializable
     #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Candidature::class)]
     private Collection $candidatures;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $is_rent = false;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $is_sell = false;
+
+    #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Probleme::class)]
+    private Collection $problemes;
+
+    #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Reparation::class)]
+    private Collection $reparations;
+
     public function __construct()
     {
         $this->rdvs = new ArrayCollection();
-        $this->notifications = new ArrayCollection();
         $this->commodites = new ArrayCollection();
         $this->photoImmos = new ArrayCollection();
         $this->candidatures = new ArrayCollection();
+        $this->problemes = new ArrayCollection();
+        $this->reparations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -233,36 +242,6 @@ class BienImmo implements \JsonSerializable
         return $this;
     }
 
-    /**
-     * @return Collection<int, Notification>
-     */
-    public function getNotifications(): Collection
-    {
-        return $this->notifications;
-    }
-
-    public function addNotification(Notification $notification): static
-    {
-        if (!$this->notifications->contains($notification)) {
-            $this->notifications->add($notification);
-            $notification->setBienImmo($this);
-        }
-
-        return $this;
-    }
-
-    public function removeNotification(Notification $notification): static
-    {
-        if ($this->notifications->removeElement($notification)) {
-            // set the owning side to null (unless already changed)
-            if ($notification->getBienImmo() === $this) {
-                $notification->setBienImmo(null);
-            }
-        }
-
-        return $this;
-    }
-
     public function getAdresse(): ?Adresse
     {
         return $this->adresse;
@@ -276,6 +255,23 @@ class BienImmo implements \JsonSerializable
     }
 
     public function jsonSerialize() {
+        $photos = [];
+        foreach ($this->photoImmos as $photoImmo) {
+            $photos[] = [
+                'id' => $photoImmo->getId(),
+                'nom' => $photoImmo->getNom(),
+            ];
+        }
+
+        $commodites = [];
+        foreach ($this->commodites as $commodite) {
+            $commodites[] = [
+                'id' => $commodite->getId(),
+                'nom' => $commodite->getNom(),
+                'icone' => $commodite->getIcone()
+            ];
+        }
+        
         return [
             'id' => $this->id,
             'nb_piece' => $this->nb_piece,
@@ -283,7 +279,7 @@ class BienImmo implements \JsonSerializable
             'nom' => $this->nom,
             'vue' => $this->vue,
             'chambre' => $this->chambre,
-            'photoImmos' => $this->photoImmos,
+            'photos' => $photos,
             'cuisine' => $this->cuisine,
             'toilette' => $this->toilette,
             'prix' => $this->prix,
@@ -294,7 +290,7 @@ class BienImmo implements \JsonSerializable
             'adresse' => $this->adresse,
             'createdAt' => $this->createdAt,
             'updateAt' => $this->updateAt,
-            'commodite' => $this->commodites
+            'commodite' => $commodites
         ];
     }
 
@@ -474,6 +470,90 @@ class BienImmo implements \JsonSerializable
             // set the owning side to null (unless already changed)
             if ($candidature->getBien() === $this) {
                 $candidature->setBien(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function isIsRent(): ?bool
+    {
+        return $this->is_rent;
+    }
+
+    public function setIsRent(bool $is_rent): static
+    {
+        $this->is_rent = $is_rent;
+
+        return $this;
+    }
+
+    public function isIsSell(): ?bool
+    {
+        return $this->is_sell;
+    }
+
+    public function setIsSell(?bool $is_sell): static
+    {
+        $this->is_sell = $is_sell;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Probleme>
+     */
+    public function getProblemes(): Collection
+    {
+        return $this->problemes;
+    }
+
+    public function addProbleme(Probleme $probleme): static
+    {
+        if (!$this->problemes->contains($probleme)) {
+            $this->problemes->add($probleme);
+            $probleme->setBien($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProbleme(Probleme $probleme): static
+    {
+        if ($this->problemes->removeElement($probleme)) {
+            // set the owning side to null (unless already changed)
+            if ($probleme->getBien() === $this) {
+                $probleme->setBien(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Reparation>
+     */
+    public function getReparations(): Collection
+    {
+        return $this->reparations;
+    }
+
+    public function addReparation(Reparation $reparation): static
+    {
+        if (!$this->reparations->contains($reparation)) {
+            $this->reparations->add($reparation);
+            $reparation->setBien($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReparation(Reparation $reparation): static
+    {
+        if ($this->reparations->removeElement($reparation)) {
+            // set the owning side to null (unless already changed)
+            if ($reparation->getBien() === $this) {
+                $reparation->setBien(null);
             }
         }
 

@@ -44,6 +44,9 @@ class BienImmoRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('b');
         $qb->innerJoin('b.adresse','a')
         ->where('b.id = :adressId')
+        ->andWhere('b.deletedAt IS NULL')
+        ->andWhere('b.is_rent = false')
+        ->andWhere('b.is_sell = false')
         ->andWhere($qb->expr()->eq('a.commune',':communeId'))
         ->setParameter('adressId', $adressId)
         ->setParameter('communeId', $communeId);
@@ -58,6 +61,9 @@ class BienImmoRepository extends ServiceEntityRepository
    {
        return $this->createQueryBuilder('b')
            ->andWhere('b.nb_piece = :nb_piece')
+           ->andWhere('b.deletedAt IS NULL')
+           ->andWhere('b.is_rent = false')
+           ->andWhere('b.is_sell = false')
            ->setParameter('nb_piece', $piece)
            ->orderBy('b.nb_piece', 'ASC')
            ->setMaxResults(10)
@@ -82,6 +88,9 @@ class BienImmoRepository extends ServiceEntityRepository
    {
        return $this->createQueryBuilder('b')
            ->andWhere('b.prix = :prix')
+           ->andWhere('b.deletedAt IS NULL')
+           ->andWhere('b.is_rent = false')
+           ->andWhere('b.is_sell = false')
            ->setParameter('prix', $prix)
            ->orderBy('b.prix', 'ASC')
            ->setMaxResults(10)

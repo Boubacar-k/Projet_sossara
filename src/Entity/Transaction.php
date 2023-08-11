@@ -90,17 +90,17 @@ class Transaction
         return $this;
     }
 
-    public function getBienImmo(): ?User
-    {
-        return $this->bien_immo;
-    }
+    // public function getBienImmo(): ?User
+    // {
+    //     return $this->bien_immo;
+    // }
 
-    public function setBienImmo(?User $bien_immo): static
-    {
-        $this->bien_immo = $bien_immo;
+    // public function setBienImmo(?User $bien_immo): static
+    // {
+    //     $this->bien_immo = $bien_immo;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getBien(): ?BienImmo
     {

@@ -58,19 +58,19 @@ class SecurityController extends AbstractController
     public function login(Request $request,JWTTokenManagerInterface $JWTManager, UserRepository $userRepository, UserPasswordHasherInterface $passwordHasher): Response
     {
         $data = json_decode($request->getContent(), true);
-        $email = $data['email'];
-        $password = $data['password'];
+        $email = trim($data['email']);
+        $password = trim($data['password']);
 
         $user = $userRepository->findOneBy(['email' => $email]);
 
         // $user = $this->get('App\Service\UserService')->getUserByCredentials($credentials);
 
         if (!$user) {
-            return $this->json(['etat' => false, 'message' => 'Email invalide'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['etat' => false, 'message' => 'Email ou Mot de passe incorrecte'], Response::HTTP_BAD_REQUEST);
         }
 
         if (!$passwordHasher->isPasswordValid($user, $password)) {
-            return $this->json(['etat' => false, 'message' => 'Mot de passe invalide'], Response::HTTP_UNAUTHORIZED);
+            return $this->json(['etat' => false, 'message' => 'Email ou Mot de passe incorrecte'], Response::HTTP_UNAUTHORIZED);
         }
 
         $userInfo = [
@@ -89,7 +89,7 @@ class SecurityController extends AbstractController
 
     private function generateJwtToken(UserInterface $user): string
     {
-        $payload = ['email' => $user->getEmail(), 'password' => $user->getRoles()];
+        $payload = ['email' => $user->getUserIdentifier(), 'password' => $user->getRoles()];
         return $this->jwtEncoder->encode($payload);
     }
 

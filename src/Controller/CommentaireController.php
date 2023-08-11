@@ -16,16 +16,18 @@ use App\Entity\Commentaire;
 use App\Repository\BienImmoRepository;
 use App\Repository\CommentaireRepository;
 use App\Entity\User;
-use App\Entity\BienImmo;
-use Symfony\Component\WebLink\GenericLinkProvider;
-use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Component\WebLink\Link;
 
 
 #[Route('/api', name: 'api_')]
 class CommentaireController extends AbstractController
 {
-    const ATTRIBUTES_TO_SERIALIZE = ['id','contenu','bien_immo'];
+    private $entityManager;
+    private $userRepository;
+    private $bienImmoRepository;
+    private $commentaireRepository;
+    private $publisher;
+    const ATTRIBUTES_TO_SERIALIZE = ['id','contenu','bien_immo','createdAt','utilisateur'=>['nom','email','telephone','photo']];
     public function __construct(EntityManagerInterface $entityManager,UserRepository $userRepository,PublisherInterface $publisher,
     BienImmoRepository $bienImmoRepository,CommentaireRepository $commentaireRepository){
         $this->entityManager = $entityManager;
@@ -39,9 +41,9 @@ class CommentaireController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        $bienImmo = $bienImmoRepository->find($id);
+        $bienImmo = $bienImmoRepository->findOneBy(['id'=>$id,'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
 
-        $contenu = $data['contenu'];
+        $contenu = trim($data['contenu']);
         $commentaire = new Commentaire();
 
         $commentaire->setContenu($contenu);
@@ -82,9 +84,9 @@ class CommentaireController extends AbstractController
     }
 
     #[Route('/commentaire/get/{id}', name: 'getCommentaire')]
-    public function getCom(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,CommentaireRepository $commentaireRepository,Request $request,int $id){
+    public function getCom(BienImmoRepository $bienImmoRepository,Request $request,int $id){
         // $bienImmo = $bienImmoRepository->find($id);
-        $bienImmo = $bienImmoRepository->find($id);
+        $bienImmo = $bienImmoRepository->findOneBy(['id'=>$id,'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
 
         $bienImmoId = $bienImmo->getId();
         $commentaire = $this->commentaireRepository->findBy(['bien_immo'=>$bienImmoId]);

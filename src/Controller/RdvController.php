@@ -24,7 +24,12 @@ use Symfony\Component\WebLink\Link;
 #[Route('/api', name: 'api_')]
 class RdvController extends AbstractController
 {
-    const ATTRIBUTES_TO_SERIALIZE = ['id','heure','date','bien_immo'];
+    private $entityManager;
+    private $userRepository;
+    private $bienImmoRepository;
+    private $RdvRepository;
+    private $publisher;
+    const ATTRIBUTES_TO_SERIALIZE = ['id','heure','date','bien_immo','utilisateur'=>['nom','email','telephone','photo']];
     public function __construct(EntityManagerInterface $entityManager,UserRepository $userRepository,PublisherInterface $publisher,
     BienImmoRepository $bienImmoRepository,RdvRepository $rdvRepository){
         $this->entityManager = $entityManager;
@@ -38,7 +43,7 @@ class RdvController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        $bienImmo = $bienImmoRepository->find($id);
+        $bienImmo = $bienImmoRepository->findOneBy(['id'=>$id,'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
 
         $bienUser = $bienImmo->getUtilisateur();
 
@@ -90,7 +95,7 @@ class RdvController extends AbstractController
     #[Route('/rdv/get/mine', name: 'getMineRdv',methods: ['GET'])]
     public function getCom(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,RdvRepository $rdvRepository,Request $request){
 
-        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId()]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
 
         $Rdv= [];
 
@@ -121,5 +126,25 @@ class RdvController extends AbstractController
         return $this->json($rdv,Response::HTTP_OK,[],[
             'attributes' => self::ATTRIBUTES_TO_SERIALIZE
         ]);
+    }
+
+    #[Route('/rdv/all/get/{id}', name: 'getBienRdv',methods: ['GET'])]
+    public function getBienRDV(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,RdvRepository $rdvRepository,Request $request,int $id){
+        // $bienImmo = $bienImmoRepository->find($id);
+        $bienImmo = $bienImmoRepository->findOneBy(['id'=>$id,'utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
+
+        if($bienImmo!= null){
+            $bienImmoId = $bienImmo->getId();
+            $rdv = $rdvRepository->findBy(['bien'=>$bienImmoId]);
+
+            $hubUrl = $this->getParameter('mercure.default_hub');
+            $this->addLink($request, new Link('mercure',$hubUrl));
+            return $this->json($rdv,Response::HTTP_OK,[],[
+                'attributes' => self::ATTRIBUTES_TO_SERIALIZE
+            ]);
+        }
+        else{
+            throw new \Exception("Ce bien n'existe pas");
+        }
     }
 }

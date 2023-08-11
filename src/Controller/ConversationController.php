@@ -21,6 +21,9 @@ use Symfony\Component\WebLink\Link;
 #[Route('/api', name: 'api_')]
 class ConversationController extends AbstractController
 {
+    private $entityManager;
+    private $userRepository;
+    private $conversationRepository;
 
     public function __construct(UserRepository $userRepository, EntityManagerInterface $entityManager,ConversationRepository $conversationRepository){
         $this->userRepository = $userRepository;
