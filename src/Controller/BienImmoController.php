@@ -77,55 +77,59 @@ class BienImmoController extends AbstractController
     {
         $pays = $paysRepository->findAll();
         $region = $regionRepository->findAll();
-        $data = json_decode($request->getContent(), true);
 
-        $commoditeId = $data['commodite'];
-        $typeId = $data['type'];
-        $communeId = $data['commune'];
+        $commodites = $request->get('commodite');
+        $typeId = $request->request->get('type');
+        $communeId = $request->request->get('commune');
         $type = $typeImmoRepository->find($typeId);
         $commune = $communeRepository->find($communeId);
         $adresse = new Adresse();
         $immo = new BienImmo();
-        $immo->setNbPiece($data['nb_piece']);
-        $immo->setNom($data['nom']);
-        $immo->setChambre($data['chambre']);
-        $immo->setCuisine($data['cuisine']);
-        $immo->setToilette($data['toilette']);
-        $immo->setSurface($data['surface']);
-        $immo->setPrix($data['prix']);
-        $immo->setStatut($data['statut']);
-        $immo->setDescription($data['description']);
+        $immo->setNbPiece($request->request->get('nb_piece'));
+        $immo->setNom($request->request->get('nom'));
+        $immo->setChambre($request->request->get('chambre'));
+        $immo->setCuisine($request->request->get('cuisine'));
+        $immo->setToilette($request->request->get('toilette'));
+        $immo->setSurface($request->request->get('surface'));
+        $immo->setPrix($request->request->get('prix'));
+        $immo->setStatut($request->request->get('statut'));
+        $immo->setDescription($request->request->get('description'));
         $immo->setTypeImmo($type);
         $immo->setCreatedAt(new \DateTimeImmutable());
         $immo->setUpdateAt(new \DateTimeImmutable());
-        $images = $request->files->get('photo');
-
-        if ($images != null) {
-            foreach ($images as $image) {
-                $imageFileName = $fileUploader->upload($image);
-                
-                $photo = new PhotoImmo();
-                $photo->setNom($imageFileName);
-                $immo->addPhotoImmo($photo);
-                $entityManager->persist($photo);
+        if ($request->files->has('photo')) {
+            $images = $request->files->get('photo');
+            if ($images != null) {
+                foreach ($images as $image) {
+                    $imageFileName = $fileUploader->upload($image);
+                    
+                    $photo = new PhotoImmo();
+                    $photo->setNom($imageFileName);
+                    $immo->addPhotoImmo($photo);
+                    $entityManager->persist($photo);
+                }
             }
         }
         
 
-        $adresse->setQuartier($data['quartier']);
-        $adresse->setRue($data['rue']);
-        $adresse->setPorte($data['porte']);
+        $adresse->setQuartier($request->request->get('quartier'));
+        $adresse->setRue($request->request->get('rue'));
+        $adresse->setPorte($request->request->get('porte'));
         $adresse->setCommune($commune);
 
         $immo->setAdresse($adresse);
         $immo->setUtilisateur($user);
         // $commodites->addBienImmo($immo);//
-        foreach ($commoditeId as $id) {
-            $commodite = $commoditeRepository->find($id);
-            
-            if ($commodite !== null) {
-                $immo->addCommodite($commodite);
+        if($commodites !=null){
+            foreach ($commodites as $id) {
+                $commodite = $commoditeRepository->find($id);
+                
+                if ($commodite !== null) {
+                    $immo->addCommodite($commodite);
+                }
             }
+        }else{
+            return $this->json(['message' => 'null est envoyer']);
         }
 
         if ($request->getMethod() == Request::METHOD_POST) {
@@ -142,7 +146,7 @@ class BienImmoController extends AbstractController
                 throw $e;
             }
             // $commodite->addBienImmo($immo);
-            return $this->json(['message' => 'Le bien a été jouté avec succès'], Response::HTTP_OK);
+            return $this->json(['message' => 'Le bien a été ajouté avec succès'], Response::HTTP_OK);
         }
 
         return $this->json(['message' => 'il y a une erreur ']);
@@ -339,11 +343,10 @@ class BienImmoController extends AbstractController
     #[Route('/bien/immo/update/{id}', name: 'app_update_bien_immo',methods: ['POST'])]
     public function UpdateBienImmo (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     Request $request, CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,
-    AdresseRepository $addresseRepository,FileUploader $fileUploader,int $id): Response
+    AdresseRepository $addresseRepository,PhotoImmoRepository $photoImmoRepository,FileUploader $fileUploader,int $id): Response
     {
 
         $bien = $bienImmoRepository->findOneBy(['id' => $id,'utilisateur'=> $user->getId(),'deletedAt' => null, 'is_rent' => false,'is_sell' => false]);
-
         if ($bien === null) {
             return $this->json(['message' => 'Le bien n\'existe pas'], Response::HTTP_NOT_FOUND);
         }
@@ -353,47 +356,58 @@ class BienImmoController extends AbstractController
 
         $adresseId = $bien->getAdresse();
 
-        $commoditeId = $data['commodite'];
-        $typeId = $data['type'];
-        $communeId = $data['commune'];
+        $commoditeId = $request->get('commodite');
+        $typeId = $request->request->get('type');
+        $communeId = $request->request->get('commune');
         $type = $typeImmoRepository->find($typeId);
         $commune = $communeRepository->find($communeId);
         $adresse = $addresseRepository->findOneBy(['id' => $adresseId]);
         $photo = new PhotoImmo();
-        $bien->setNbPiece($data['nb_piece']);
-        $bien->setNom($data['nom']);
-        $bien->setChambre($data['chambre']);
-        $bien->setCuisine($data['cuisine']);
-        $bien->setToilette($data['toilette']);
-        $bien->setSurface($data['surface']);
-        $bien->setPrix($data['prix']);
-        $bien->setStatut($data['statut']);
-        $bien->setDescription($data['description']);
-        foreach ($commoditeId as $id) {
-            $commodite = $commoditeRepository->find($id);
-            
-            if ($commodite !== null) {
-                $bien->addCommodite($commodite);
+
+        $bien->setNbPiece($request->request->get('nb_piece'));
+        $bien->setNom($request->request->get('nom'));
+        $bien->setChambre($request->request->get('chambre'));
+        $bien->setCuisine($request->request->get('cuisine'));
+        $bien->setToilette($request->request->get('toilette'));
+        $bien->setSurface($request->request->get('surface'));
+        $bien->setPrix($request->request->get('prix'));
+        $bien->setStatut($request->request->get('statut'));
+        $bien->setDescription($request->request->get('description'));
+
+        if($commoditeId !=null){
+            foreach ($commoditeId as $id) {
+                $commodite = $commoditeRepository->find($id);
+                
+                if ($commodite !== null) {
+                    $bien->addCommodite($commodite);
+                }
             }
+        }else{
+            return $this->json(['message' => 'null est envoyer']);
         }
         $bien->setTypeImmo($type);
         $bien->setUpdateAt(new \DateTimeImmutable());
-        $images = $request->files->get('photo');
-        if ($images != null) {
-            foreach ($images as $image) {
-                $imageFileName = $fileUploader->upload($image);
-                
-                $photo = new PhotoImmo();
-                $photo->setNom($imageFileName);
-                $bien->addPhotoImmo($photo);
-                $entityManager->persist($photo);
+        if ($request->files->has('photo')) {
+            $images = $request->files->get('photo');
+            if ($images != null) {
+                foreach ($images as $image) {
+                    $imageFileName = $fileUploader->upload($image);
+                    
+                    $photos = $photoImmoRepository->findBy(['bien' => $bien->getId()]);
+                    foreach ($photos as $photo) {
+                        $photo->setNom($imageFileName);
+                        $bien->addPhotoImmo($photo);
+                        $entityManager->persist($photo);
+                    }
+                }
             }
         }
         
 
-        $adresse->setQuartier($data['quartier']);
-        $adresse->setRue($data['rue']);
-        $adresse->setPorte($data['porte']);
+    
+        $adresse->setQuartier($request->request->get('quartier'));
+        $adresse->setRue($request->request->get('rue'));
+        $adresse->setPorte($request->request->get('porte'));
         $adresse->setCommune($commune);
 
         $bien->setAdresse($adresse);

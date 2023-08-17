@@ -9,3 +9,7 @@ kernel:
     type: annotation
 api_login_check:
     path: /api/login_check
+
+angular_redirect:
+    path: /api/angular-redirect
+    controller: App\Controller\AngularRedirectController::redirectToAngular

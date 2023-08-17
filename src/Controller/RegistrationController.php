@@ -27,6 +27,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use App\Service\FileUploader;
+use Symfony\Component\Validator\Constraints\IsNull;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[Route('/api', name: 'api_')]
 class RegistrationController extends AbstractController
@@ -47,55 +49,54 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register', methods: ['POST'],)]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, UserAuthenticatorInterface $userAuthenticator, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, UrlGeneratorInterface $urlGeneratorInterface, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
     {
         $user = new User();
         $document = new Document();
 
         $data = json_decode($request->getContent(), true);
 
-        $user->setNom(trim($data['nom']));
-        $user->setEmail(trim($data['email']));
-        if (isset($data['roles'])) {
-            $newRoles = $data['roles'];
+        $user->setNom($request->request->get('nom'));
+        $user->setEmail($request->request->get('email'));
+        $newRoles = $request->request->get('roles');
 
-            $newRoles = trim($newRoles);
-        
-            if ($newRoles === 'PROPRIETAIRE') {
-                $user->setRoles(['ROLE_PROPRIETAIRE']);
-            } elseif ($newRoles === 'AGENCE') {
-                $user->setRoles(['ROLE_AGENCE']);
-            }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
-                $user->setRoles(['ROLE_LOCATAIRE']);
-            } else {
+        $newRoles = $newRoles;
+    
+        if ($newRoles === 'PROPRIETAIRE') {
+            $user->setRoles(['ROLE_PROPRIETAIRE']);
+        } elseif ($newRoles === 'AGENCE') {
+            $user->setRoles(['ROLE_AGENCE']);
+        }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
+            $user->setRoles(['ROLE_LOCATAIRE']);
+        } else {
 
-                return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
-            }
+            return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
         }
-        $user->setPassword($userPasswordHasher->hashPassword($user,trim($data['password'])));
-        $user->setDateNaissance(new \DateTime($data['dateNaissance']));
-        $user->setTelephone(trim($data['telephone']));
+        $user->setPassword($userPasswordHasher->hashPassword($user,$request->request->get('password')));
+        $user->setDateNaissance(new \DateTime($request->request->get('dateNaissance')));
+        $user->setTelephone($request->request->get('telephone'));
 
         $user->setIsCertified(false);
         $user->setIsVerified(false);
         $user->setCreatedAt(new \DateTimeImmutable());
         $user->setUpdateAt(new \DateTimeImmutable());
 
-        $document->setNumDoc(trim($data['num_doc']));
-        $document->setNom(trim($data['nom_doc']));
+        $document->setNumDoc($request->request->get('num_doc'));
+        $document->setNom($request->request->get('nom_doc'));
         $images = $request->files->get('photo');
-        if ($images!=null) {
-            foreach ($images as $image){
+        if ($images != null) {
+            foreach ($images as $image) {
                 $imageFileName = $fileUploader->upload($image);
                 
-                $photo = new PhotoDocument();
-                $photo->setNom($imageFileName);
-                $photo->setCreatedAt(new \DateTimeImmutable());
-                $photo->setUpdatedAt(new \DateTimeImmutable());
-                $document->addPhotoDocument($photo);
-                $entityManager->persist($photo);
-            }
+                    $photo = new PhotoDocument();
+                    $photo->setNom($imageFileName);
+                    $photo->setCreatedAt(new \DateTimeImmutable());
+                    $photo->setUpdatedAt(new \DateTimeImmutable());
+                    $document->addPhotoDocument($photo);
+                    $entityManager->persist($photo);
+                }
         }
+        
         $user->addDocument($document);
 
         if ($request->getMethod() == Request::METHOD_POST){
@@ -116,16 +117,30 @@ class RegistrationController extends AbstractController
             $this->authenticateUser($user, $token);
 
             // generate a signed url and email it to the user
+            
             $this->emailVerifier->sendEmailConfirmation('api_app_verify_email', $user,
                 (new TemplatedEmail())
                     ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
                     ->to($user->getEmail())
                     ->subject('Please Confirm your Email')
-                    ->htmlTemplate('registration/confirmation_email.html.twig')
+                    ->html('<a href="' . $this->generateUrl('angular_redirect', [], $urlGeneratorInterface::ABSOLUTE_URL) . '">Click here to confirm your email</a>')
+                    // ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-            // do anything else you need here, like send an email
+            $userInfo = [
+                'id' => $user->getId(),
+                'username' => $user->getnom(),
+                'email' => $user->getEmail(),
+                'date de naissance' => $user->getDateNaissance(),
+                'telephone' => $user->getTelephone(),
+            ];
 
-            return $this->json(['token' => $token,'message' => 'Utilisateur inscrit avec succès'], Response::HTTP_OK);
+            $user->setIsVerified(true); // Set the is_verified field to true
+
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+
+            return $this->json(['token' => $token,'user'=> $userInfo,'message' => 'Utilisateur inscrit avec succès'], Response::HTTP_OK);
         }
 
         return $this->json([

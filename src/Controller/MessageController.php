@@ -48,7 +48,7 @@ class MessageController extends AbstractController
 
         array_map(function ($message){
             $message->setMine(
-                $message->getUtilisateur()->getId() === $this->getUser() ? true:false
+                $message->getUtilisateur() === $this->getUser() ? true:false
             );
         },$messages);
 
@@ -78,7 +78,6 @@ class MessageController extends AbstractController
 
         $message->setContent($content);
         $message->setUtilisateur($user);
-        $message->setMine(true);
 
         $conversation->addMessage($message);
         $conversation->setLastMessage($message);
@@ -114,6 +113,7 @@ class MessageController extends AbstractController
 
         $this->publisher->__invoke($update);
 
+        $message->setMine(true);
         return $this->json($message,Response::HTTP_CREATED,[],[
             'attributes' => self::ATTRIBUTES_TO_SERIALIZE
         ]);
