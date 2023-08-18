@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TransactionRepository::class)]
 #[ApiResource]
-class Transaction
+class Transaction implements \JsonSerializable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -190,5 +190,17 @@ class Transaction
         $this->updateAt = $updateAt;
 
         return $this;
+    }
+
+    public function jsonSerialize() {
+            return [
+            'id' => $this->id,
+            'bien' => $this->bien,
+            'statut' => $this->statut,
+            'somme' => $this->somme,
+            'utilisateur' => $this->utilisateur,
+            'createdAt' => $this->createdAt,
+            'updateAt' => $this->updateAt,
+        ];
     }
 }

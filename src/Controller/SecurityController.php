@@ -79,6 +79,7 @@ class SecurityController extends AbstractController
             'email' => $user->getEmail(),
             'date de naissance' => $user->getDateNaissance(),
             'telephone' => $user->getTelephone(),
+            'photo' => $user->getPhoto(),
         ];
         $token = $this->generateJwtToken($user);
 

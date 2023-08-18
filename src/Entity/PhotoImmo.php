@@ -28,7 +28,7 @@ class PhotoImmo implements \JsonSerializable
 
     public function getNom(): ?string
     {
-        return $this->nom ? '/public/uploads/images/' . $this->nom : null;
+        return $this->nom;
     }
 
     public function setNom(string $nom): static

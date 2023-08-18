@@ -10,7 +10,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProblemeRepository::class)]
-// #[ApiResource]
+#[ApiResource]
 class Probleme implements \JsonSerializable
 {
     #[ORM\Id]

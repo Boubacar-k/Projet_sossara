@@ -14,6 +14,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\PhotoDocumentRepository;
 use App\Entity\Document;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -101,18 +102,50 @@ class HomeController extends AbstractController
                 throw $e;
             }
 
-            return $this->json(['message' => 'Photo mis à jour avec succès'], Response::HTTP_OK);
+            return $this->json(['message' => 'Votre photo a ete mis à jour avec succès'], Response::HTTP_OK);
         }
         return $this->json([
             'erreur' => "erreur de modification",
         ]);
     }
 
-    #[Route('/user/photo/get', name: 'app_user_get_photo', methods: ['GET'])]
-    public function getPhoto(#[CurrentUser] User $user,FileUploader $fileUploader): Response
+    // #[Route('/user/photo/get', name: 'app_user_get_photo', methods: ['GET'])]
+    // public function getPhoto(#[CurrentUser] User $user,FileUploader $fileUploader): Response
+    // {
+    //     $photo = $user->getPhoto();
+    //     return $this->json(['photo' => $photo], Response::HTTP_OK);
+    // }
+
+    #[Route('/user/password_reset', name: 'password_reset_app_user',methods: ['POST'])]
+    public function reset (#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager,UserPasswordHasherInterface $userPasswordHasher): Response
     {
-        $photo = $user->getPhoto();
-        return $this->json(['photo' => $photo], Response::HTTP_OK);
+        $data = json_decode($request->getContent(), true);
+
+        $oldPass = $data['old_password'];
+        if (!$userPasswordHasher->isPasswordValid($user, $oldPass)) {
+            return $this->json(['etat' => false, 'message' => 'Mot de passe incorrecte'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user->setPassword($userPasswordHasher->hashPassword($user,$data['password']));
+            $user->setUpdateAt(new \DateTimeImmutable());
+            if ($request->getMethod() == Request::METHOD_POST){
+                $entityManager->getConnection()->beginTransaction();
+                try {
+                    $entityManager->persist($user);
+                    $entityManager->flush();
+                    $entityManager->commit();
+                } catch (\Exception $e) {
+                    $entityManager->rollback();
+                    throw $e;
+                }
+    
+                return $this->json(['message' => 'mot de passe mis à jour avec succès'], Response::HTTP_OK);
+            }
+
+        return $this->json([
+            'erreur' => "erreur de mise a jour",
+        ]);
+
     }
 
     #[Route('/user/bien/immo/rent/get', name: 'app_user_bien_immo_get_rent', methods: ['GET'])]

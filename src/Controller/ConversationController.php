@@ -34,7 +34,7 @@ class ConversationController extends AbstractController
     public function index(#[CurrentUser] User $user,Request $request): Response
     {
         $otherUser = $request->get('otherUser',0);
-        $otherUser = $this->userRepository->find($otherUser);
+        $otherUser = $this->userRepository->findOneBy(['email'=>$otherUser]);
 
         if(is_null($otherUser)){
             throw new \Exception("Utilisateur non trouve");

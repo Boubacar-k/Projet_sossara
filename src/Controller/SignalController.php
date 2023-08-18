@@ -37,8 +37,7 @@ class SignalController extends AbstractController
     ,FileUploader $fileUploader): Response
     {
         $probleme = new Probleme();
-        $data = json_decode($request->getContent(), true);
-        $typeId = $data['type'];
+        $typeId = $request->request->get('type');
         $type = $typeProblemeRepository->find($typeId);
         $biens = $bienImmoRepository->findOneBy(['id' => $id, 'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
         $transac = $transactionRepository->findOneBy(['utilisateur'=>$user->getId(),'bien' => $biens->getId()]);
@@ -56,17 +55,19 @@ class SignalController extends AbstractController
         $probleme->setUtilisateur($user);
         $probleme->setBien($bien);
         $probleme->setTypeProbleme($type);
-        $probleme->setContenu(trim($data['contenu']));
+        $probleme->setContenu($request->request->get('contenu'));
 
-        $images = $request->files->get('photo');
-        if ($images!=null) {
-            foreach ($images as $image){
-                $imageFileName = $fileUploader->upload($image);
-                
-                $photo = new PhotoReclamation();
-                $photo->setNom($imageFileName);
-                $probleme->addPhotoReclamation($photo);
-                $entityManager->persist($photo);
+        if ($request->files->has('photo')) {
+            $images = $request->files->get('photo');
+            if ($images != null) {
+                foreach ($images as $image) {
+                    $imageFileName = $fileUploader->upload($image);
+                    
+                    $photo = new PhotoReclamation();
+                    $photo->setNom($imageFileName);
+                    $probleme->addPhotoReclamation($photo);
+                    $entityManager->persist($photo);
+                }
             }
         }
 
@@ -117,10 +118,10 @@ class SignalController extends AbstractController
 
         $hubUrl = $this->getParameter('mercure.default_hub');
         $this->addLink($request, new Link('mercure',$hubUrl));
-        // $response = new Response( json_encode( array( 'attributes' => $problemes) ) );
-        // return $response;
-        return $this->json($problemes,Response::HTTP_OK,[],[
-            'attributes' => self::ATTRIBUTES_TO_SERIALIZE
-        ]);
+        $response = new Response( json_encode( array( 'attributes' => $problemes) ) );
+        return $response;
+        // return $this->json($problemes,Response::HTTP_OK,[],[
+        //     'attributes' => self::ATTRIBUTES_TO_SERIALIZE
+        // ]);
     }
 }

@@ -15,6 +15,7 @@ use App\Repository\BienImmoRepository;
 use App\Repository\AddresseRepository;
 use App\Repository\PhotoImmoRepository;
 use App\Repository\TypeImmoRepository;
+use App\Repository\TransactionRepository;
 use App\Repository\UserRepository;
 use App\Repository\PaysRepository;
 use App\Repository\RegionRepository;
@@ -36,6 +37,10 @@ use App\Service\FileUploader;
 #[Route('/api', name: 'api_')]
 class BienImmoController extends AbstractController
 {
+    const ATTRIBUTES_TO_SERIALIZE = ['statut','somme','createdAt','bien'=>['id','nb_piece','surface','chambre','photos',
+    'cuisine','toilette','description','typeImmo','adresse','commodite'],
+    'utilisateur'=>['nom','email','telephone','photo']];
+
     #[Route('/bien/immo', name: 'app_bien_immo')]
     public function index(Request $request,BienImmoRepository $bienImmoRepository): Response
     {
@@ -434,29 +439,39 @@ class BienImmoController extends AbstractController
     }
 
     #[Route('/bien/immo/get/rent', name: 'app_bien_immo_rent',methods: ['GET'])]
-    public function getBienRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository): Response
+    public function getBienRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
         $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
         $biens= [];
 
             foreach ($bienImmo as $bien) {
-                $biens[] = $bien;
+                $transaction = $transactionRepository->findBy(['bien'=>$bien]);
+                foreach($transaction as $transac){
+                    $biens[] = $transac;
+                }
             }
         
         $response = new Response( json_encode( array( 'biens' => $biens) ) );
         return $response;
+
+        // return $this->json($biens,Response::HTTP_CREATED,[],[
+        //     'attributes' => self::ATTRIBUTES_TO_SERIALIZE
+        // ]);
     }
 
 
     #[Route('/bien/immo/get/sell', name: 'app_bien_immo_sell',methods: ['GET'])]
-    public function getBienSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository): Response
+    public function getBienSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
         $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => true]);
         $biens= [];
 
-            foreach ($bienImmo as $bien) {
-                $biens[] = $bien;
+        foreach ($bienImmo as $bien) {
+            $transaction = $transactionRepository->findBy(['bien'=>$bien]);
+            foreach($transaction as $transac){
+                $biens[] = $transac;
             }
+        }
         
         $response = new Response( json_encode( array( 'biens' => $biens) ) );
         return $response;

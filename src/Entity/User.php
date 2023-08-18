@@ -422,7 +422,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
 
     public function getPhoto(): ?string
     {
-        return $this->photo ? '/public/uploads/images/' . $this->photo : null;
+        return $this->photo;
     }
 
     public function setPhoto(?string $photo): static
