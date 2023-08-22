@@ -30,11 +30,11 @@ class ConversationController extends AbstractController
         $this->entityManager = $entityManager;
         $this->conversationRepository = $conversationRepository;
     }
-    #[Route('/conversation', name: 'newConversation')]
-    public function index(#[CurrentUser] User $user,Request $request): Response
+    #[Route('/conversation/new/{id}', name: 'newConversation')]
+    public function index(#[CurrentUser] User $user,Request $request,int $id): Response
     {
-        $otherUser = $request->get('otherUser',0);
-        $otherUser = $this->userRepository->findOneBy(['email'=>$otherUser]);
+        // $otherUser = $request->get('otherUser',0);
+        $otherUser = $this->userRepository->find($id);
 
         if(is_null($otherUser)){
             throw new \Exception("Utilisateur non trouve");

@@ -77,10 +77,28 @@ class SecurityController extends AbstractController
             'id' => $user->getId(),
             'username' => $user->getnom(),
             'email' => $user->getEmail(),
-            'date de naissance' => $user->getDateNaissance(),
+            'date_de_naissance' => $user->getDateNaissance(),
             'telephone' => $user->getTelephone(),
             'photo' => $user->getPhoto(),
+            'documents' => [],
         ];
+
+        foreach ($user->getDocuments() as $document) {
+            $photos = [];
+            foreach ($document->getPhotoDocuments() as $photoDocument) {
+                $photos[] = [
+                    'id' => $photoDocument->getId(),
+                    'nom' => $photoDocument->getNom(),
+                ];
+            }
+            $documentInfo = [
+                'id' => $document->getId(),
+                'nom' => $document->getNom(),
+                'num_doc'=> $document->getNumDoc(),
+                'photo' => $photos,
+            ];
+            $userInfo['documents'][] = $documentInfo;
+        }
         $token = $this->generateJwtToken($user);
 
         $this->authenticateUser($user, $token);

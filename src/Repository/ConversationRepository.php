@@ -45,7 +45,7 @@ class ConversationRepository extends ServiceEntityRepository
     public function findConversationByUser(int $userId){
 
         $qb = $this->createQueryBuilder('c');
-        $qb->select('otherUser.nom','c.id as conversationId','lm.content','lm.createdAt')
+        $qb->select('otherUser.nom','otherUser.photo','c.id as conversationId','lm.content','lm.createdAt')
         ->innerJoin('c.participants','p','WITH',$qb->expr()->neq('p.utilisateur',':utilisateur'))
         ->innerJoin('c.participants','me','WITH',$qb->expr()->eq('me.utilisateur',':utilisateur'))
         ->leftJoin('c.last_message','lm')
