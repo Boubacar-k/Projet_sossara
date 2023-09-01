@@ -165,6 +165,7 @@ class Probleme implements \JsonSerializable
             }
         return [
             'id' => $this->id,
+            'type_probleme' => $this->typeProbleme,
             'contenu' => $this->contenu,
             'createdAt' => $this->createdAt,
             'updateAt' => $this->updatedAt,

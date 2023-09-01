@@ -7,18 +7,13 @@ use App\Repository\BienImmoRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\User;
 use App\Entity\Transaction;
 use App\Entity\TypeTransaction;
 use App\Repository\TypeTransactionRepository;
 use App\Repository\CandidatureRepository;
-use App\Entity\BienImmo;
 use Symfony\Component\HttpFoundation\Request;
-use App\Repository\UserRepository;
-use App\Entity\Document;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -86,15 +81,38 @@ class CandidatureController extends AbstractController
         $candidatureUser = $candidature->getUtilisateur();
         $typeAchat = $typeTransactionRepository->find(1);
         $typeLocation = $typeTransactionRepository->find(2);
+        $num = $candidatureUser->getTelephone();
         
         $bienUser = $bien->getUtilisateur();
         $bienStatut = $bien->getStatut();
+        $bienPeriode = $bien->getPeriode();
+        $periodeId = $bienPeriode->getId();
         $bienSomme = $bien->getPrix();
         if($bienUser->getEmail() == $user->getEmail()){
             $candidature->setIsAccepted(true);
             if($bienStatut == "A louer"){
                 $transaction->setTypeTransaction($typeLocation);
                 $bien->setIsRent(true);
+                if($periodeId == 1){
+                    $date = new \DateTimeImmutable();
+                    $transaction->setFiniAt($date->add(new \DateInterval('P1H')));
+                }
+                if($periodeId == 2){
+                    $date = new \DateTimeImmutable();
+                    $transaction->setFiniAt($date->add(new \DateInterval('P1D')));
+                }
+                if($periodeId == 3){
+                    $date = new \DateTimeImmutable();
+                    $transaction->setFiniAt($date->add(new \DateInterval('P1W')));
+                }
+                if($periodeId == 4){
+                    $date = new \DateTimeImmutable();
+                    $transaction->setFiniAt($date->add(new \DateInterval('P1M')));
+                }
+                if($periodeId == 5){
+                    $date = new \DateTimeImmutable();
+                    $transaction->setFiniAt($date->add(new \DateInterval('P1Y')));
+                }
                 $transaction->setBien($bien);
                 $transaction->setUtilisateur($candidatureUser);
                 $transaction->setStatut("En location");

@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ReparationRepository::class)]
 #[ApiResource]
-class Reparation
+class Reparation implements \JsonSerializable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -29,6 +29,12 @@ class Reparation
 
     #[ORM\ManyToOne(inversedBy: 'reparations')]
     private ?TypeProbleme $type = null;
+
+    #[ORM\Column]
+    private ?bool $is_ok = false;
+
+    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    private ?Probleme $probleme = null;
 
     public function __construct(){
         $this->createdAt = new \DateTimeImmutable();
@@ -96,6 +102,41 @@ class Reparation
     public function setType(?TypeProbleme $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function isIsOk(): ?bool
+    {
+        return $this->is_ok;
+    }
+
+    public function setIsOk(bool $is_ok): static
+    {
+        $this->is_ok = $is_ok;
+
+        return $this;
+    }
+
+    public function jsonSerialize() {
+        return [
+        'id' => $this->id,
+        'bien' => $this->bien,
+        'somme' => $this->somme,
+        'probleme'=> $this->probleme,
+        'createdAt' => $this->createdAt,
+        'updatedAt' => $this->updatedAt,
+    ];
+}
+
+    public function getProbleme(): ?Probleme
+    {
+        return $this->probleme;
+    }
+
+    public function setProbleme(?Probleme $probleme): static
+    {
+        $this->probleme = $probleme;
 
         return $this;
     }

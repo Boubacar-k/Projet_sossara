@@ -12,7 +12,7 @@ use App\Entity\Commodite;
 use App\Entity\Commune;
 use App\Entity\Adresse;
 use App\Repository\BienImmoRepository;
-use App\Repository\AddresseRepository;
+use App\Repository\PeriodeRepository;
 use App\Repository\PhotoImmoRepository;
 use App\Repository\TypeImmoRepository;
 use App\Repository\TransactionRepository;
@@ -59,34 +59,38 @@ class BienImmoController extends AbstractController
 
     #[Route('/type/immo', name: 'app_type_immo')]
     public function type(Request $request,PaysRepository $paysRepository, RegionRepository $regionRepository,
-    CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,): Response
+    CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,PeriodeRepository $periodeRepository): Response
     {
         $type = $typeImmoRepository->findAll();
         $pays = $paysRepository->findAll();
         $region = $regionRepository->findAll();
         $commodite = $commoditeRepository->findAll();
         $commune = $communeRepository->findAll();
+        $periode = $periodeRepository->findAllExceptThis(6);
         $response = new Response(json_encode( array( 'type' => $type,'pays' => $pays,
         'region' => $region,
         'commodite' => $commodite,
-        'commune' => $commune  ) ) );
+        'commune' => $commune, 'periode' => $periode  ) ) );
         return $response;
     }
 
     #[Route('/bien/immo/new', name: 'app_new_immo')]
-    // #[IsGranted('ROLE_USER')]
+    #[IsGranted('ROLE_USER')]
     public function createBienImmo(
         #[CurrentUser] User $user,
         Request $request, EntityManagerInterface $entityManager,PaysRepository $paysRepository, RegionRepository $regionRepository,
-        CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,FileUploader $fileUploader ): Response 
+        CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,PeriodeRepository $periodeRepository,
+        FileUploader $fileUploader ): Response 
     {
         $pays = $paysRepository->findAll();
         $region = $regionRepository->findAll();
 
         $commodites = $request->get('commodite');
+        $periodeId = $request->request->get('periode');
         $typeId = $request->request->get('type');
         $communeId = $request->request->get('commune');
         $type = $typeImmoRepository->find($typeId);
+        $periode = $periodeRepository->find($periodeId);
         $commune = $communeRepository->find($communeId);
         $adresse = new Adresse();
         $immo = new BienImmo();
@@ -100,6 +104,7 @@ class BienImmoController extends AbstractController
         $immo->setStatut($request->request->get('statut'));
         $immo->setDescription($request->request->get('description'));
         $immo->setTypeImmo($type);
+        $immo->setPeriode($periode);
         $immo->setCreatedAt(new \DateTimeImmutable());
         $immo->setUpdateAt(new \DateTimeImmutable());
         if ($request->files->has('photo')) {
@@ -120,6 +125,8 @@ class BienImmoController extends AbstractController
         $adresse->setQuartier($request->request->get('quartier'));
         $adresse->setRue($request->request->get('rue'));
         $adresse->setPorte($request->request->get('porte'));
+        $adresse->setLongitude($request->request->get('longitude'));
+        $adresse->setLatitude($request->request->get('latitude'));
         $adresse->setCommune($commune);
 
         $immo->setAdresse($adresse);
@@ -348,7 +355,7 @@ class BienImmoController extends AbstractController
     #[Route('/bien/immo/update/{id}', name: 'app_update_bien_immo',methods: ['POST'])]
     public function UpdateBienImmo (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     Request $request, CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,
-    AdresseRepository $addresseRepository,PhotoImmoRepository $photoImmoRepository,FileUploader $fileUploader,int $id): Response
+    AdresseRepository $addresseRepository,PhotoImmoRepository $photoImmoRepository,PeriodeRepository $periodeRepository,FileUploader $fileUploader,int $id): Response
     {
 
         $bien = $bienImmoRepository->findOneBy(['id' => $id,'utilisateur'=> $user->getId(),'deletedAt' => null, 'is_rent' => false,'is_sell' => false]);
@@ -362,9 +369,11 @@ class BienImmoController extends AbstractController
         $adresseId = $bien->getAdresse();
 
         $commoditeId = $request->get('commodite');
+        $periodeId = $request->request->get('periode');
         $typeId = $request->request->get('type');
         $communeId = $request->request->get('commune');
         $type = $typeImmoRepository->find($typeId);
+        $periode = $periodeRepository->find($periodeId);
         $commune = $communeRepository->find($communeId);
         $adresse = $addresseRepository->findOneBy(['id' => $adresseId]);
         $photo = new PhotoImmo();
@@ -391,6 +400,7 @@ class BienImmoController extends AbstractController
             return $this->json(['message' => 'null est envoyer']);
         }
         $bien->setTypeImmo($type);
+        $bien->setPeriode($periode);
         $bien->setUpdateAt(new \DateTimeImmutable());
         if ($request->files->has('photo')) {
             $images = $request->files->get('photo');
@@ -413,6 +423,8 @@ class BienImmoController extends AbstractController
         $adresse->setQuartier($request->request->get('quartier'));
         $adresse->setRue($request->request->get('rue'));
         $adresse->setPorte($request->request->get('porte'));
+        $adresse->setLongitude($request->request->get('longitude'));
+        $adresse->setLatitude($request->request->get('latitude'));
         $adresse->setCommune($commune);
 
         $bien->setAdresse($adresse);
@@ -453,10 +465,40 @@ class BienImmoController extends AbstractController
         
         $response = new Response( json_encode( array( 'biens' => $biens) ) );
         return $response;
+    }
 
-        // return $this->json($biens,Response::HTTP_CREATED,[],[
-        //     'attributes' => self::ATTRIBUTES_TO_SERIALIZE
-        // ]);
+    #[Route('/bien/immo/get/rent/mine', name: 'app_bien_immo_rent_mine',methods: ['GET'])]
+    public function getBienRentByuser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        $biens= [];
+
+            foreach ($bienImmo as $bien) {
+                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien]);
+                foreach($transaction as $transac){
+                    $biens[] = $transac;
+                }
+            }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
+    }
+
+    #[Route('/bien/immo/get/sell/mine', name: 'app_bien_immo_sell_mine',methods: ['GET'])]
+    public function getBienSellByuser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+        $biens= [];
+
+            foreach ($bienImmo as $bien) {
+                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien]);
+                foreach($transaction as $transac){
+                    $biens[] = $transac;
+                }
+            }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
     }
 
 
@@ -468,6 +510,42 @@ class BienImmoController extends AbstractController
 
         foreach ($bienImmo as $bien) {
             $transaction = $transactionRepository->findBy(['bien'=>$bien]);
+            foreach($transaction as $transac){
+                $biens[] = $transac;
+            }
+        }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
+    }
+
+    #[Route('/bien/immo/get/sell/invoyce/{id}', name: 'app_bien_immo_sell_invoyce',methods: ['GET'])]
+    public function getBienSellForInvoyce(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,
+    TransactionRepository $transactionRepository, int $id): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+        $biens= [];
+
+        foreach ($bienImmo as $bien) {
+            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId()]);
+            foreach($transaction as $transac){
+                $biens[] = $transac;
+            }
+        }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
+    }
+
+    #[Route('/bien/immo/get/rent/invoyce/{id}', name: 'app_bien_immo_rent_invoyce',methods: ['GET'])]
+    public function getBienRentForInvoyce(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,
+    TransactionRepository $transactionRepository, int $id): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        $biens= [];
+
+        foreach ($bienImmo as $bien) {
+            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId()]);
             foreach($transaction as $transac){
                 $biens[] = $transac;
             }

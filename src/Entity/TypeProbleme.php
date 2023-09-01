@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TypeProblemeRepository::class)]
 #[ApiResource]
-class TypeProbleme
+class TypeProbleme implements \JsonSerializable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -139,5 +139,12 @@ class TypeProbleme
         }
 
         return $this;
+    }
+
+    public function jsonSerialize() {
+        return [
+            'id' => $this->id,
+            'nom' => $this->nom
+        ];
     }
 }

@@ -23,7 +23,6 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use App\Controller\RegistrationController;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
@@ -119,6 +118,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Probleme::class)]
     private Collection $problemes;
 
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Alerte::class)]
+    private Collection $alertes;
+
 
     public function __construct()
     {
@@ -132,6 +134,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         $this->participants = new ArrayCollection();
         $this->candidatures = new ArrayCollection();
         $this->problemes = new ArrayCollection();
+        $this->alertes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -415,10 +418,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         return $this;
     }
 
-    public function isIsVerified(): ?bool
-    {
-        return $this->isVerified;
-    }
+    // public function isIsVerified(): ?bool
+    // {
+    //     return $this->isVerified;
+    // }
 
     public function getPhoto(): ?string
     {
@@ -607,6 +610,36 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             // set the owning side to null (unless already changed)
             if ($probleme->getUtilisateur() === $this) {
                 $probleme->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Alerte>
+     */
+    public function getAlertes(): Collection
+    {
+        return $this->alertes;
+    }
+
+    public function addAlerte(Alerte $alerte): static
+    {
+        if (!$this->alertes->contains($alerte)) {
+            $this->alertes->add($alerte);
+            $alerte->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAlerte(Alerte $alerte): static
+    {
+        if ($this->alertes->removeElement($alerte)) {
+            // set the owning side to null (unless already changed)
+            if ($alerte->getUtilisateur() === $this) {
+                $alerte->setUtilisateur(null);
             }
         }
 

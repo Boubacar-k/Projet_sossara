@@ -111,6 +111,12 @@ class BienImmo implements \JsonSerializable
     #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Reparation::class)]
     private Collection $reparations;
 
+    #[ORM\ManyToOne(inversedBy: 'bien')]
+    private ?Periode $periode = null;
+
+    #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Alerte::class)]
+    private Collection $alertes;
+
     public function __construct()
     {
         $this->rdvs = new ArrayCollection();
@@ -119,6 +125,7 @@ class BienImmo implements \JsonSerializable
         $this->candidatures = new ArrayCollection();
         $this->problemes = new ArrayCollection();
         $this->reparations = new ArrayCollection();
+        $this->alertes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -277,6 +284,7 @@ class BienImmo implements \JsonSerializable
             'nb_piece' => $this->nb_piece,
             'surface' => $this->surface,
             'nom' => $this->nom,
+            'periode' => $this->periode,
             'vue' => $this->vue,
             'chambre' => $this->chambre,
             'photos' => $photos,
@@ -554,6 +562,48 @@ class BienImmo implements \JsonSerializable
             // set the owning side to null (unless already changed)
             if ($reparation->getBien() === $this) {
                 $reparation->setBien(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getPeriode(): ?Periode
+    {
+        return $this->periode;
+    }
+
+    public function setPeriode(?Periode $periode): static
+    {
+        $this->periode = $periode;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Alerte>
+     */
+    public function getAlertes(): Collection
+    {
+        return $this->alertes;
+    }
+
+    public function addAlerte(Alerte $alerte): static
+    {
+        if (!$this->alertes->contains($alerte)) {
+            $this->alertes->add($alerte);
+            $alerte->setBien($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAlerte(Alerte $alerte): static
+    {
+        if ($this->alertes->removeElement($alerte)) {
+            // set the owning side to null (unless already changed)
+            if ($alerte->getBien() === $this) {
+                $alerte->setBien(null);
             }
         }
 

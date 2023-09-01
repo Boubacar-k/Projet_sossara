@@ -61,7 +61,7 @@ class SecurityController extends AbstractController
         $email = trim($data['email']);
         $password = trim($data['password']);
 
-        $user = $userRepository->findOneBy(['email' => $email]);
+        $user = $userRepository->findOneBy(['email' => $email,'isVerified' => true]);
 
         // $user = $this->get('App\Service\UserService')->getUserByCredentials($credentials);
 
@@ -79,6 +79,7 @@ class SecurityController extends AbstractController
             'email' => $user->getEmail(),
             'date_de_naissance' => $user->getDateNaissance(),
             'telephone' => $user->getTelephone(),
+            'role' => $user->getRoles(),
             'photo' => $user->getPhoto(),
             'documents' => [],
         ];

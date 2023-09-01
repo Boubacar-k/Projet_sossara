@@ -14,7 +14,7 @@ class AngularRedirectController extends AbstractController
     #[Route('/angular/redirect', name: 'app_angular_redirect')]
     public function redirectToAngular(Request $request): RedirectResponse
     {
-        $angularUrl = 'http://localhost:4200/userpages/dashboard'; // Remplacez par l'URL de votre page Angular
+        $angularUrl = 'http://localhost:4200/auth/connexion'; // Remplacez par l'URL de votre page Angular
         return $this->redirect($angularUrl);
     }
 }

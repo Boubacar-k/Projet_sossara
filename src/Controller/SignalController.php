@@ -5,7 +5,6 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use App\Repository\UserRepository;
 use App\Repository\TransactionRepository;
 use App\Repository\BienImmoRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -123,5 +122,22 @@ class SignalController extends AbstractController
         // return $this->json($problemes,Response::HTTP_OK,[],[
         //     'attributes' => self::ATTRIBUTES_TO_SERIALIZE
         // ]);
+    }
+
+    #[Route('/signal/get/mine', name: 'getSignalMine',methods: ['GET'])]
+    public function getSignalerMesProbleme(#[CurrentUser] User $user,ProblemeRepository $problemeRepository){
+
+        $problemeList = $problemeRepository->findBy(['utilisateur'=>$user->getId(),'is_ok' => false]);
+
+        $response = new Response( json_encode( array( 'mes_reclamations' => $problemeList) ) );
+        return $response;
+    }
+
+    #[Route('/probleme/get', name: 'getProbleme',methods: ['GET'])]
+    public function getTypeProbleme(TypeProblemeRepository $typeProblemeRepository){
+
+        $probleme = $typeProblemeRepository->findAll();
+        $response = new Response( json_encode( array( 'type_problemes' => $probleme) ) );
+        return $response;
     }
 }

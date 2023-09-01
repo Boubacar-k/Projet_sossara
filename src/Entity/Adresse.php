@@ -99,6 +99,8 @@ class Adresse implements \JsonSerializable
             'quartier' => $this->quartier,
             'rue' => $this->rue,
             'porte' => $this->porte,
+            'longitude' => $this->longitude,
+            'latitude' => $this->latitude,
             'commune' => $this->commune
         ];
     }

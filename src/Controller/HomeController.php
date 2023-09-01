@@ -37,28 +37,13 @@ class HomeController extends AbstractController
     #[Route('/user/update', name: 'update_app_user',methods: ['POST'])]
     public function Update (#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager): Response
     {
-        $data = json_decode($request->getContent(), true);
+        $user->setNom($request->request->get('nom'));
+        $user->setEmail($request->request->get('email'));
+        $user->setDateNaissance(new \DateTime($request->request->get('dateNaissance')));
+        $user->setTelephone($request->request->get('telephone'));
 
-        $user->setNom(trim($data['nom']));
-        $user->setEmail(trim($data['email']));
-        $user->setDateNaissance(new \DateTime($data['dateNaissance']));
-        $roles[] = 'ROLE_PROPRIETAIRE';
-        if (isset($data['roles'])) {
-            $newRoles = $data['roles'];
-
-            $newRoles = trim($newRoles);
-        
-            if ($newRoles === 'PROPRIETAIRE') {
-                $user->setRoles(['ROLE_PROPRIETAIRE']);
-            } elseif ($newRoles === 'AGENCE') {
-                $user->setRoles(['ROLE_AGENCE']);
-            } else {
-                // Rôle invalide
-                return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
-            }
-        }
-        $user->setTelephone(trim($data['telephone']));
         $user->setUpdateAt(new \DateTimeImmutable());
+
 
         if ($request->getMethod() == Request::METHOD_POST){
             $entityManager->getConnection()->beginTransaction();

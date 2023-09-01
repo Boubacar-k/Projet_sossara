@@ -7,7 +7,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\Document;
 use App\Entity\PhotoDocument;
-use App\Form\RegistrationFormType;
+use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,8 +30,10 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use App\Service\FileUploader;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Symfony\Component\Validator\Constraints\IsNull;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Http\Authentication\UserTokenInterface;
 
 #[Route('/api', name: 'api_')]
 class RegistrationController extends AbstractController
@@ -52,7 +54,8 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register', methods: ['POST'],)]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, UrlGeneratorInterface $urlGeneratorInterface, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, 
+    UrlGeneratorInterface $urlGeneratorInterface, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
     {
         $user = new User();
         $document = new Document();
@@ -115,26 +118,34 @@ class RegistrationController extends AbstractController
                 throw $e;
             }
 
+            
+
+            // generate a signed url and email it to the user
             $token = $this->generateJwtToken($user);
+
+            $confirmationUrl = $this->generateUrl('api_app_verify_email', [
+                'token' => $token,
+            ], $urlGeneratorInterface::ABSOLUTE_URL);
 
             $this->authenticateUser($user, $token);
 
-            // generate a signed url and email it to the user
-            
-            $this->emailVerifier->sendEmailConfirmation('api_app_verify_email', $user,
-                (new TemplatedEmail())
-                    ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
-                    ->to($user->getEmail())
-                    ->subject('Please Confirm your Email')
-                    ->html('<a href="' . $this->generateUrl('angular_redirect', [], $urlGeneratorInterface::ABSOLUTE_URL) . '">Click here to confirm your email</a>')
-                    // ->htmlTemplate('registration/confirmation_email.html.twig')
-            );
+            $email = (new TemplatedEmail())
+                ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
+                ->to($user->getEmail())
+                ->subject('Please Confirm your Email')
+                ->htmlTemplate('registration/confirmation_email.html.twig')
+                ->context([
+                    'confirmationUrl' => $confirmationUrl,
+                ]);
+
+            $this->emailVerifier->sendEmailConfirmation('api_app_verify_email', $user, $email);
             $userInfo = [
                 'id' => $user->getId(),
                 'username' => $user->getnom(),
                 'email' => $user->getEmail(),
                 'date_de_naissance' => $user->getDateNaissance(),
                 'telephone' => $user->getTelephone(),
+                'role' => $user->getRoles(),
                 'photo' => $user->getPhoto(),
                 'documents' => [],
             ];
@@ -156,13 +167,7 @@ class RegistrationController extends AbstractController
                 $userInfo['documents'][] = $documentInfo;
             }
 
-            $user->setIsVerified(true); // Set the is_verified field to true
-
-            $entityManager->persist($user);
-            $entityManager->flush();
-
-
-            return $this->json(['token' => $token,'user'=> $userInfo,'message' => 'Utilisateur inscrit avec succès'], Response::HTTP_OK);
+            return $this->json(['token' =>$token,'message' => 'Utilisateur inscrit avec succès'], Response::HTTP_OK);
         }
 
         return $this->json([
@@ -172,7 +177,12 @@ class RegistrationController extends AbstractController
 
     private function generateJwtToken(UserInterface $user): string
     {
-        $payload = ['username' => $user->getUserIdentifier(), 'roles' => $user->getRoles()];
+        $payload = [
+            'username' => $user->getUserIdentifier(),
+            'roles' => $user->getRoles(),
+            'id' => $user->getId(),
+        ];
+    
         return $this->jwtEncoder->encode($payload);
     }
 
@@ -184,22 +194,35 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
+    public function verifyUserEmail(Request $request, UserRepository $userRepository, TranslatorInterface $translator, EntityManagerInterface $entityManager): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_USER');
+        $token = $request->get('token');
+        $user = new User();
 
-        // validate email confirmation link, sets User::isVerified=true and persists
-        try {
-            $this->emailVerifier->handleEmailConfirmation($request, $this->getUser());
-        } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('verify_email_error', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
-
-            return $this->redirectToRoute('api_app_register');
+        if (!$token) {
+            // Le token n'est pas présent dans la requête, renvoyez une réponse d'erreur.
+            return $this->json(['message' => 'JWT Token not present'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // @TODO Change the redirect on success and handle or remove the flash message in your templates
-        $this->addFlash('success', 'Your email address has been verified.');
+        try {
+            $data = $this->jwtEncoder->decode($token);
+        } catch (JWTDecodeFailureException $e) {
+            // Le token n'est pas valide, renvoyez une réponse d'erreur.
+            return $this->json(['message' => 'JWT Token not valid'], Response::HTTP_UNAUTHORIZED);
+        }
 
-        return $this->redirectToRoute('api_app_login');
+        $user = $userRepository->findOneBy(['email' => $data['username']]);
+
+        if (!$user) {
+            throw new AccessDeniedException('User not found');
+        }
+
+        if($user && !$user->isVerified()){
+            $user->setIsVerified(true);
+            $entityManager->persist($user);
+            $entityManager->flush();
+            
+        }
+        return $this->redirectToRoute('api_app_angular_redirect');
     }
 }
