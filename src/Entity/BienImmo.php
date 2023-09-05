@@ -79,9 +79,6 @@ class BienImmo implements \JsonSerializable
     private ?string $nom = "nom";
 
     #[ORM\Column(nullable: true)]
-    private ?int $vue = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $chambre = null;
 
     #[ORM\Column(nullable: true)]
@@ -117,6 +114,9 @@ class BienImmo implements \JsonSerializable
     #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Alerte::class)]
     private Collection $alertes;
 
+    #[ORM\OneToMany(mappedBy: 'bien', targetEntity: Favoris::class)]
+    private Collection $favoris;
+
     public function __construct()
     {
         $this->rdvs = new ArrayCollection();
@@ -126,6 +126,7 @@ class BienImmo implements \JsonSerializable
         $this->problemes = new ArrayCollection();
         $this->reparations = new ArrayCollection();
         $this->alertes = new ArrayCollection();
+        $this->favoris = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -285,7 +286,6 @@ class BienImmo implements \JsonSerializable
             'surface' => $this->surface,
             'nom' => $this->nom,
             'periode' => $this->periode,
-            'vue' => $this->vue,
             'chambre' => $this->chambre,
             'photos' => $photos,
             'cuisine' => $this->cuisine,
@@ -364,17 +364,6 @@ class BienImmo implements \JsonSerializable
         return $this;
     }
 
-    public function getVue(): ?int
-    {
-        return $this->vue;
-    }
-
-    public function setVue(?int $vue): static
-    {
-        $this->vue = $vue;
-
-        return $this;
-    }
 
     public function getChambre(): ?int
     {
@@ -604,6 +593,36 @@ class BienImmo implements \JsonSerializable
             // set the owning side to null (unless already changed)
             if ($alerte->getBien() === $this) {
                 $alerte->setBien(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Favoris>
+     */
+    public function getFavoris(): Collection
+    {
+        return $this->favoris;
+    }
+
+    public function addFavori(Favoris $favori): static
+    {
+        if (!$this->favoris->contains($favori)) {
+            $this->favoris->add($favori);
+            $favori->setBien($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFavori(Favoris $favori): static
+    {
+        if ($this->favoris->removeElement($favori)) {
+            // set the owning side to null (unless already changed)
+            if ($favori->getBien() === $this) {
+                $favori->setBien(null);
             }
         }
 

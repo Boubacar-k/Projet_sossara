@@ -121,6 +121,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Alerte::class)]
     private Collection $alertes;
 
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Blog::class)]
+    private Collection $blogs;
+
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Favoris::class)]
+    private Collection $favoris;
 
     public function __construct()
     {
@@ -135,6 +140,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         $this->candidatures = new ArrayCollection();
         $this->problemes = new ArrayCollection();
         $this->alertes = new ArrayCollection();
+        $this->blogs = new ArrayCollection();
+        $this->favoris = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -645,4 +652,70 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
 
         return $this;
     }
+
+    /**
+     * @return Collection<int, Blog>
+     */
+    public function getBlogs(): Collection
+    {
+        return $this->blogs;
+    }
+
+    public function addBlog(Blog $blog): static
+    {
+        if (!$this->blogs->contains($blog)) {
+            $this->blogs->add($blog);
+            $blog->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBlog(Blog $blog): static
+    {
+        if ($this->blogs->removeElement($blog)) {
+            // set the owning side to null (unless already changed)
+            if ($blog->getUtilisateur() === $this) {
+                $blog->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function __toString()
+    {
+        return $this->email;
+    }
+
+    /**
+     * @return Collection<int, Favoris>
+     */
+    public function getFavoris(): Collection
+    {
+        return $this->favoris;
+    }
+
+    public function addFavori(Favoris $favori): static
+    {
+        if (!$this->favoris->contains($favori)) {
+            $this->favoris->add($favori);
+            $favori->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFavori(Favoris $favori): static
+    {
+        if ($this->favoris->removeElement($favori)) {
+            // set the owning side to null (unless already changed)
+            if ($favori->getUtilisateur() === $this) {
+                $favori->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
 }

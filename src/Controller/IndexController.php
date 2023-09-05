@@ -25,20 +25,20 @@ class IndexController extends AbstractController
         ;
         $response = $this->render('index/index.html.twig',['controller_name' => 'IndexController']);
 
-        $response->headers->setCookie(
-            new Cookie(
-                'mercureAuthorizarion',
-                $token,
-                (new \DateTime())
-                ->add(new \DateInterval('PT2H')),
-                '/.well-known/mercure',
-                null,
-                false,
-                true,
-                false,
-                'strict'
-            )
-        );
+        // $response->headers->setCookie(
+        //     new Cookie(
+        //         'mercureAuthorizarion',
+        //         $token,
+        //         (new \DateTime())
+        //         ->add(new \DateInterval('PT2H')),
+        //         '/.well-known/mercure',
+        //         null,
+        //         false,
+        //         true,
+        //         false,
+        //         'strict'
+        //     )
+        // );
 
         return $response;
     }

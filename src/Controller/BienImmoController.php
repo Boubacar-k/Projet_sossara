@@ -11,6 +11,7 @@ use App\Entity\Region;
 use App\Entity\Commodite;
 use App\Entity\Commune;
 use App\Entity\Adresse;
+use App\Entity\Favoris;
 use App\Repository\BienImmoRepository;
 use App\Repository\PeriodeRepository;
 use App\Repository\PhotoImmoRepository;
@@ -22,6 +23,7 @@ use App\Repository\RegionRepository;
 use App\Repository\CommuneRepository;
 use App\Repository\AdresseRepository;
 use App\Repository\CommoditeRepository;
+use App\Repository\FavorisRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -41,6 +43,7 @@ class BienImmoController extends AbstractController
     'cuisine','toilette','description','typeImmo','adresse','commodite'],
     'utilisateur'=>['nom','email','telephone','photo']];
 
+    // LA LISTE DE TOUS LES BIENS PUBLIER
     #[Route('/bien/immo', name: 'app_bien_immo')]
     public function index(Request $request,BienImmoRepository $bienImmoRepository): Response
     {
@@ -48,7 +51,7 @@ class BienImmoController extends AbstractController
         $response = new Response(json_encode( array( 'biens' => $biens ) ) );
         return $response;
     }
-
+    // LA LISTE DE TOUS LES BIENS PUBLIER PAR L'UTILISATEUR CONNECTE
     #[Route('/bien/immo/user', name: 'app_user_bien_immo')]
     public function findByUser(#[CurrentUser] User $user, BienImmoRepository $bienImmoRepository): Response
     {
@@ -73,9 +76,9 @@ class BienImmoController extends AbstractController
         'commune' => $commune, 'periode' => $periode  ) ) );
         return $response;
     }
-
+    // ENDPOINT POUR L'ENREGISTREMENT OU PUBLICATION D'UN BIEN
     #[Route('/bien/immo/new', name: 'app_new_immo')]
-    #[IsGranted('ROLE_USER')]
+    // #[IsGranted('ROLE_USER')]
     public function createBienImmo(
         #[CurrentUser] User $user,
         Request $request, EntityManagerInterface $entityManager,PaysRepository $paysRepository, RegionRepository $regionRepository,
@@ -164,6 +167,7 @@ class BienImmoController extends AbstractController
         return $this->json(['message' => 'il y a une erreur ']);
     }
 
+    // LISTE DES BIENS EN FONCTION DE L'ID DU TYPE
     #[Route('/bien/immo/type/{id}', name: 'app_type_bien_immo')]
     public function show_by_type(BienImmoRepository $bienImmoRepository,TypeImmoRepository $typeImmoRepository,int $id): Response
     {
@@ -174,7 +178,7 @@ class BienImmoController extends AbstractController
             return $response;
         }
     }
-
+    // LISTE DES BIENS EN FONCTION DE LA COMMUNE
     #[Route('/bien/immo/commune/{id}', name: 'app_bien_immo_commune')]
     public function show_by_commune(BienImmoRepository $bienImmoRepository,AdresseRepository $adresseRepository,CommuneRepository $communeRepository,int $id): Response
     {
@@ -205,6 +209,7 @@ class BienImmoController extends AbstractController
         // }
     }
 
+    // LISTE DES BIENS EN FONCTION DE LA REGION
     #[Route('/bien/immo/region/{id}', name: 'app_bien_immo_region')]
     public function show_by_region(BienImmoRepository $bienImmoRepository,AdresseRepository $adresseRepository,
     CommuneRepository $communeRepository,RegionRepository $regionRepository,int $id): Response
@@ -233,6 +238,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS EN FONCTION DES COMMODITES
     #[Route('/bien/immo/commodite/{id}', name: 'app_commodite_bien_immo')]
     public function show_by_commodite(EntityManagerInterface $entityManager,int $id): Response
     {
@@ -253,6 +259,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS EN FONCTION DU NOMBRE DE SALON
     #[Route('/bien/immo/piece/{piece}', name: 'app_piece_bien_immo')]
     public function show_by_piece(BienImmoRepository $bienImmoRepository,int $piece): Response
     {
@@ -261,6 +268,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // AFFICHER LES DETAILS D'UN BIEN PARTICULIER
     #[Route('/bien/immo/{id}', name: 'app_id_bien_immo')]
     public function show_by_bienId(BienImmoRepository $bienImmoRepository,int $id): Response
     {
@@ -274,6 +282,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS EN FONCTION DU STATUT
     #[Route('/bien/immo/statut/{statut}', name: 'app_statut_bien_immo')]
     public function show_by_statut(EntityManagerInterface $entityManager,string $statut): Response
     {
@@ -293,6 +302,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS EN FONCTION DU NOM DU TYPE
     #[Route('/bien/immo/nom/{nom}', name: 'app_nom_bien_immo')]
     public function show_by_nom(EntityManagerInterface $entityManager,string $nom): Response
     {
@@ -327,7 +337,7 @@ class BienImmoController extends AbstractController
         return $this->json(['message'=>'rien a retourner']);
     }
 
-
+    // LISTE DES BIENS EN FONCTION DU PRIX
     #[Route('/bien/immo/{prix}', name: 'app_prix_bien_immo')]
     public function show_by_price(BienImmoRepository $bienImmoRepository,float $prix): Response
     {
@@ -338,6 +348,7 @@ class BienImmoController extends AbstractController
         ]);
     }
 
+    // SUPPRIMER UN BIEN
     #[Route('/bien/immo/delete/{id}', name: 'app_delete_bienImmo',methods: ['POST'])]
     public function Delete (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,int $id): Response
     {
@@ -352,6 +363,7 @@ class BienImmoController extends AbstractController
         return $this->json(['message' => 'Suppression effectue succès'], Response::HTTP_OK);
     }
 
+    // MODIFIER UN BIEN
     #[Route('/bien/immo/update/{id}', name: 'app_update_bien_immo',methods: ['POST'])]
     public function UpdateBienImmo (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     Request $request, CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,
@@ -450,6 +462,7 @@ class BienImmoController extends AbstractController
         return $this->json(['message' => 'il y a une erreur ']);
     }
 
+    // LISTE DES BIENS EN LOCATION EN FONCTION DE L'UTILISATEUR CONNECTE (BAILLEUR/PROPRIETAIRE/AGENCE NB: CELUI A QUI LE BIEN APPARTIENT)
     #[Route('/bien/immo/get/rent', name: 'app_bien_immo_rent',methods: ['GET'])]
     public function getBienRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -467,6 +480,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS LOUES EN FONCTION DE L'UTILISATEUR CONNECTE (LOCATAIRE NB: LES BIENS QUE L'UTILISATEUR CONNECTE A LOUES)
     #[Route('/bien/immo/get/rent/mine', name: 'app_bien_immo_rent_mine',methods: ['GET'])]
     public function getBienRentByuser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -484,6 +498,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // LISTE DES BIENS ACHETES EN FONCTION DE L'UTILISATEUR CONNECTE (ACHETEUR NB: LES BIENS QUE L'UTILISATEUR CONNECTE A ACHETES)
     #[Route('/bien/immo/get/sell/mine', name: 'app_bien_immo_sell_mine',methods: ['GET'])]
     public function getBienSellByuser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -501,7 +516,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
-
+    // LISTE DES BIENS VENDUS EN FONCTION DE L'UTILISATEUR CONNECTE (BAILLEUR/PROPRIETAIRE/AGENCE NB: LES BIENS QUE L'UTILISATEUR CONNECTE A VENDUS)
     #[Route('/bien/immo/get/sell', name: 'app_bien_immo_sell',methods: ['GET'])]
     public function getBienSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -519,6 +534,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // AFFICHER LA FACTURE D'UN BIEN ACHETE
     #[Route('/bien/immo/get/sell/invoyce/{id}', name: 'app_bien_immo_sell_invoyce',methods: ['GET'])]
     public function getBienSellForInvoyce(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,
     TransactionRepository $transactionRepository, int $id): Response
@@ -537,6 +553,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
+    // AFFICHER LA FACTURE D'UN BIEN LOUE
     #[Route('/bien/immo/get/rent/invoyce/{id}', name: 'app_bien_immo_rent_invoyce',methods: ['GET'])]
     public function getBienRentForInvoyce(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,
     TransactionRepository $transactionRepository, int $id): Response
@@ -555,7 +572,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
-
+    // MODIFIER LA PHOTO D'UN BIEN
     #[Route('/bien/immo/photo/update/{id}', name: 'app_update_photo_bien_immo',methods: ['POST'])]
     public function UpdateBienImmoPhoto (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     Request $request,FileUploader $fileUploader,int $id): Response
@@ -587,4 +604,56 @@ class BienImmoController extends AbstractController
 
         return $this->json(['message' => 'Aucune photo à enregistrer'], Response::HTTP_BAD_REQUEST);
     }
+
+    // AJOUTER/SUPPRIMER UN BIEN COMME FAVORIS
+    #[Route('/bien/immo/view/{id}', name: 'app_view_bien_immo',methods: ['POST'])]
+    public function View (#[CurrentUser] User $user,FavorisRepository $favorisRepository , EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
+    Request $request,int $id): Response
+    {
+        $bien = $bienImmoRepository->findOneBy(['id' => $id,'deletedAt' => null, 'is_rent' => false,'is_sell' => false]);
+        if ($bien === null) {
+            return $this->json(['message' => 'Le bien n\'existe pas'], Response::HTTP_NOT_FOUND);
+        }
+        $favorisExist = $favorisRepository->findOneBy(['bien'=>$bien,'utilisateur'=>$user]);
+
+        if($favorisExist){
+            $entityManager->remove($favorisExist);
+            $entityManager->flush();
+            return $this->json(['message' => 'bien supprime de vos favoris'], Response::HTTP_OK);
+        }
+        else{
+            $favoris = new Favoris();
+
+            $favoris->setBien($bien);
+            $favoris->setUtilisateur($user);
+
+            if ($request->getMethod() == Request::METHOD_POST) {
+                $entityManager->getConnection()->beginTransaction();
+                try {
+    
+                    $entityManager->persist($favoris);
+                    $entityManager->flush();
+                    $entityManager->commit();
+                    
+                } catch (\Exception $e) {
+                    $entityManager->rollback();
+                    throw $e;
+                }
+                return $this->json(['message' => 'vous avez aime ce bien'], Response::HTTP_OK);
+            }
+    
+            return $this->json(['message' => 'il y a une erreur ']);
+        }
+    }
+
+
+    #[Route('/bien/immo/views/get/{id}', name: 'app_bien_immo_get_views',methods: ['GET'])]
+    public function getViews(BienImmoRepository $bienImmoRepository,FavorisRepository $favorisRepository, int $id): Response
+    {
+        $bienImmo = $bienImmoRepository->findOneBy(['id' => $id,'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
+        $favoris = $favorisRepository->count(['bien' => $bienImmo]);
+        $response = new Response( json_encode( array( 'vues' => $favoris) ) );
+        return $response;
+    }
+
 }
