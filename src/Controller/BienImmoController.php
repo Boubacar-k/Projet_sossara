@@ -35,6 +35,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileUploader;
+use Symfony\Component\Security\Http\Attribute\IsGranted as AttributeIsGranted;
 
 #[Route('/api', name: 'api_')]
 class BienImmoController extends AbstractController
@@ -48,6 +49,16 @@ class BienImmoController extends AbstractController
     public function index(Request $request,BienImmoRepository $bienImmoRepository): Response
     {
         $biens = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => false,'is_sell' => false]);
+        $response = new Response(json_encode( array( 'biens' => $biens ) ) );
+        return $response;
+    }
+
+    // TOTAL DE TOUS LES BIENS PUBLIER
+    #[Route('/bien/immo/all', name: 'app_bien_immo_all',methods: ['GET'])]
+
+    public function all(BienImmoRepository $bienImmoRepository): Response
+    {
+        $biens = $bienImmoRepository->findBy(['deletedAt' => null]);
         $response = new Response(json_encode( array( 'biens' => $biens ) ) );
         return $response;
     }
@@ -294,7 +305,6 @@ class BienImmoController extends AbstractController
            ->andWhere('o.is_rent = false')
            ->andWhere('o.is_sell = false')
            ->setParameter('statut', '%'.$statut.'%')
-           ->setMaxResults(10)
            ->getQuery()
            ->getResult();
 
@@ -312,7 +322,6 @@ class BienImmoController extends AbstractController
            ->andWhere('o.is_rent = false')
            ->andWhere('o.is_sell = false')
            ->setParameter('nom', '%'.$nom.'%')
-           ->setMaxResults(10)
            ->getQuery()
            ->getResult();
 
@@ -325,7 +334,6 @@ class BienImmoController extends AbstractController
             ->andWhere('b.is_rent = false')
             ->andWhere('b.is_sell = false')
            ->setParameter('typImmo', $type)
-           ->setMaxResults(10)
            ->getQuery()
            ->getResult();
 
@@ -470,7 +478,7 @@ class BienImmoController extends AbstractController
         $biens= [];
 
             foreach ($bienImmo as $bien) {
-                $transaction = $transactionRepository->findBy(['bien'=>$bien]);
+                $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
                 foreach($transaction as $transac){
                     $biens[] = $transac;
                 }
@@ -488,13 +496,31 @@ class BienImmoController extends AbstractController
         $biens= [];
 
             foreach ($bienImmo as $bien) {
-                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien]);
+                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien,'isDeleted' => false]);
                 foreach($transaction as $transac){
                     $biens[] = $transac;
                 }
             }
         
         $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
+    }
+
+    //TOTAL DES BIENS LOUES
+    #[Route('/bien/immo/get/rent/all', name: 'app_bien_immo_rent_all',methods: ['GET'])]
+    public function getBienAllRent(BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->count(['deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        $response = new Response( json_encode( array( 'biens' => $bienImmo) ) );
+        return $response;
+    }
+
+    //TOTAL DES BIENS VENDUS
+    #[Route('/bien/immo/get/sell/all', name: 'app_bien_immo_sell_all',methods: ['GET'])]
+    public function getBienAllSell(BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->count(['deletedAt' => null,'is_rent' => false,'is_sell' => true]);        
+        $response = new Response( json_encode( array( 'biens' => $bienImmo) ) );
         return $response;
     }
 
@@ -506,7 +532,7 @@ class BienImmoController extends AbstractController
         $biens= [];
 
             foreach ($bienImmo as $bien) {
-                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien]);
+                $transaction = $transactionRepository->findBy(['utilisateur' => $user,'bien'=>$bien,'isDeleted' => false]);
                 foreach($transaction as $transac){
                     $biens[] = $transac;
                 }
@@ -524,7 +550,7 @@ class BienImmoController extends AbstractController
         $biens= [];
 
         foreach ($bienImmo as $bien) {
-            $transaction = $transactionRepository->findBy(['bien'=>$bien]);
+            $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
             foreach($transaction as $transac){
                 $biens[] = $transac;
             }
@@ -543,7 +569,7 @@ class BienImmoController extends AbstractController
         $biens= [];
 
         foreach ($bienImmo as $bien) {
-            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId()]);
+            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId(),'isDeleted' => false]);
             foreach($transaction as $transac){
                 $biens[] = $transac;
             }
@@ -562,7 +588,7 @@ class BienImmoController extends AbstractController
         $biens= [];
 
         foreach ($bienImmo as $bien) {
-            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId()]);
+            $transaction = $transactionRepository->findBy(['utilisateur'=>$user->getId(),'id'=> $id,'bien'=>$bien->getId(),'isDeleted' => false]);
             foreach($transaction as $transac){
                 $biens[] = $transac;
             }
@@ -572,7 +598,7 @@ class BienImmoController extends AbstractController
         return $response;
     }
 
-    // MODIFIER LA PHOTO D'UN BIEN
+    // MODIFIER LES PHOTOS D'UN BIEN
     #[Route('/bien/immo/photo/update/{id}', name: 'app_update_photo_bien_immo',methods: ['POST'])]
     public function UpdateBienImmoPhoto (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     Request $request,FileUploader $fileUploader,int $id): Response
@@ -647,12 +673,190 @@ class BienImmoController extends AbstractController
     }
 
 
+    // AFFICHER LE NOMBRE DE VUE (FAVORIS) PAR BIEN
     #[Route('/bien/immo/views/get/{id}', name: 'app_bien_immo_get_views',methods: ['GET'])]
     public function getViews(BienImmoRepository $bienImmoRepository,FavorisRepository $favorisRepository, int $id): Response
     {
         $bienImmo = $bienImmoRepository->findOneBy(['id' => $id,'deletedAt' => null,'is_rent' => false,'is_sell' => false]);
         $favoris = $favorisRepository->count(['bien' => $bienImmo]);
+        
         $response = new Response( json_encode( array( 'vues' => $favoris) ) );
+        return $response;
+    }
+
+    // AFFICHER LE NOMBRE DE VUE (FAVORIS) PAR BIEN
+    #[Route('/bien/immo/favoris/get', name: 'app_bien_immo_get_favorisList',methods: ['GET'])]
+    public function favorisList(BienImmoRepository $bienImmoRepository,FavorisRepository $favorisRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => false,'is_sell' => false]);
+        $biensAvecFavoris = [];
+
+        foreach ($bienImmo as $bien) {
+            // Comptez le nombre de favoris pour ce bien
+            $nombreFavoris = $favorisRepository->findBy(['bien' => $bien]);
+
+            foreach($nombreFavoris as $favoris){
+                $biensAvecFavoris[]=$nombreFavoris;
+            }
+        }
+        
+        $response = new Response( json_encode( array( 'vues' => $biensAvecFavoris) ) );
+        return $response;
+    }
+    // AFFICHER LE NOMBRE DE VUE (FAVORIS) PAR BIEN
+    #[Route('/bien/immo/most/views/get', name: 'app_bien_immo_get_most_views',methods: ['GET'])]
+    public function getMoreViews(BienImmoRepository $bienImmoRepository,FavorisRepository $favorisRepository): Response
+    {
+        $biensImmo = $bienImmoRepository->findBy(['deletedAt' => null, 'is_rent' => false, 'is_sell' => false]);
+
+        // Créez un tableau pour stocker le nombre de favoris pour chaque bien
+        $biensAvecFavoris = [];
+
+        foreach ($biensImmo as $bien) {
+            // Comptez le nombre de favoris pour ce bien
+            $nombreFavoris = $favorisRepository->count(['bien' => $bien]);
+
+            // Stockez le bien et le nombre de favoris dans un tableau associatif
+            $biensAvecFavoris[] = [
+                'bien' => $bien,
+                'nombreFavoris' => $nombreFavoris,
+            ];
+        }
+
+        // Triez le tableau en fonction du nombre de favoris en ordre décroissant
+        usort($biensAvecFavoris, function ($a, $b) {
+            return $b['nombreFavoris'] - $a['nombreFavoris'];
+        });
+
+        // Sélectionnez les 3 premiers biens triés (les plus aimés)
+        $biensLesPlusAimes = array_slice($biensAvecFavoris, 0, 6);
+
+        // Créez un tableau pour stocker uniquement les biens (sans le nombre de favoris)
+        $biensPourReponse = [];
+
+        foreach ($biensLesPlusAimes as $bienAime) {
+            $biensPourReponse[] = $bienAime['bien'];
+        }
+
+        // Créez une réponse JSON avec les biens les plus aimés
+        $response = new Response(json_encode(['biens' => $biensPourReponse,'favoris' => $nombreFavoris]));
+        return $response;
+    }
+
+    // AFFICHER LE NOMBRE DE VUE (FAVORIS) PAR BIEN EN FONCTION DE L'UTILISATEUR
+    #[Route('/bien/immo/views/user/get', name: 'app_bien_immo_user_get_views',methods: ['GET'])]
+    public function getViewsByUeser(#[CurrentUser] User $user,FavorisRepository $favorisRepository): Response
+    {
+        $favoris = $favorisRepository->findBy(['utilisateur' => $user]);
+        $biens= [];
+        foreach($favoris as $bien){
+            $biens[] = $bien;
+        }
+        
+        $response = new Response( json_encode( array( 'vues' => $biens) ) );
+        return $response;
+    }
+
+// ----------------------------------   ---------------  CETTE PARTIE CONCERNE L'AGENCE ET LES AGENTS  ---------------  ------------------------------------------------------
+
+    // AFFICHER LES BIENS EN FONCTION DE L'AGENCE ET DE SES AGENTS
+    #[Route('/bien/immo/user/child/get/{id}', name: 'app_get_bien_agent_by_agence',methods: ['GET'])]
+    public function getBienAgentByAgence (UserRepository $userRepository,int $id,BienImmoRepository $bienImmoRepository): Response
+    {
+
+        $agents = $userRepository->findBy(['parent'=>$id]);
+        $user = $userRepository->find($id);
+
+        $biens = [];
+        foreach($agents as $agent){
+            $BienImmo = $bienImmoRepository->findBy(['utilisateur' => $agent]);
+            foreach($BienImmo as $b){
+                $biens[] = $b;
+            }
+    
+        }
+
+        $bien_immo = $bienImmoRepository->findBy(['utilisateur' => $id]);
+
+        $bien_immos = [];
+        foreach($bien_immo as $bien){
+            $bien_immos[] = $bien;
+        }
+
+        $userInfo = [
+            'id' => $user->getId(),
+            'username' => $user->getnom(),
+            'email' => $user->getEmail(),
+            'date_de_naissance' => $user->getDateNaissance(),
+            'telephone' => $user->getTelephone(),
+            'role' => $user->getRoles(),
+            'photo' => $user->getPhoto(),
+            'documents' => [],
+        ];
+
+        foreach ($user->getDocuments() as $document) {
+            $photos = [];
+            foreach ($document->getPhotoDocuments() as $photoDocument) {
+                $photos[] = [
+                    'id' => $photoDocument->getId(),
+                    'nom' => $photoDocument->getNom(),
+                ];
+            }
+            $documentInfo = [
+                'id' => $document->getId(),
+                'nom' => $document->getNom(),
+                'num_doc'=> $document->getNumDoc(),
+                'photo' => $photos,
+            ];
+            $userInfo['documents'][] = $documentInfo;
+        }
+
+
+        $response = new Response( json_encode( array('biens_agence' => $bien_immos, 'biens_agents' => $biens, 'utilisateur' => $userInfo ) ) );
+        return $response;
+    }
+
+
+    // AFFICHER LES BIENS EN FONCTION DE L'ID DE AGENT
+    #[Route('/bien/immo/user/agent/get/{id}', name: 'app_get_bien_by_agent',methods: ['GET'])]
+    public function getBienByAgent (int $id,BienImmoRepository $bienImmoRepository): Response
+    {
+        $bien_immo = $bienImmoRepository->findBy(['utilisateur' => $id]);
+
+        $bien_immos = [];
+        foreach($bien_immo as $bien){
+            $bien_immos[] = $bien;
+        }
+
+
+        $response = new Response( json_encode( array('biens_agence' => $bien_immos) ) );
+        return $response;
+    }
+
+
+    // AFFICHER LES BIENS EN FONCTION DE L'AGENCE CONNECTE ET DE SES AGENTS
+    #[Route('/bien/immo/user/agence/get', name: 'app_get_bien_by_agence',methods: ['GET'])]
+    public function getBienByAgence (#[CurrentUser] User $user,UserRepository $userRepository,BienImmoRepository $bienImmoRepository): Response
+    {
+
+        $agent = $userRepository->findBy(['parent'=>$user]);
+        $bien_immo = $bienImmoRepository->findBy(['utilisateur' => $user]);
+
+        $bien_immos = [];
+        foreach($bien_immo as $bien){
+            $bien_immos[] = $bien;
+        }
+
+        $biens = [];
+        foreach($agent as $agt){
+            $BienImmo = $bienImmoRepository->findBy(['utilisateur' => $agt]);
+            foreach($BienImmo as $bien){
+                $biens[] = $bien;
+            }
+    
+        }
+
+        $response = new Response( json_encode( array( 'biens_agents' => $biens, 'biens_agences' => $bien_immos) ) );
         return $response;
     }
 

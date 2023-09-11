@@ -57,15 +57,18 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        - { path: ^/api/home, roles: ROLE_USER }
-        - { path: ^/api/home, roles: ROLE_AGENCE }
+        - { path: ^api/admin, roles: ROLE_ADMIN }
+        # - { path: ^/api/home, roles: ROLE_USER }
+        - { path: ^/api/user/child/create, roles: ROLE_AGENCE }
         - { path: ^api/verify/email, roles: ROLE_USER }
 
     
     role_hierarchy:
         ROLE_ADMIN: ROLE_USER
-        ROLE_USER: [ROLE_AGENCE,ROLE_LOCATAIRE,ROLE_PROPRIETAIRE]
+        ROLE_AGENCE: ROLE_USER
+        ROLE_AGENT: ROLE_USER
+        ROLE_LOCATAIRE: ROLE_USER
+        ROLE_PROPRIETAIRE: ROLE_USER
         ROLE_SUPER_ADMIN: [ROLE_ADMIN, ROLE_ALLOWED_TO_SWITCH]
 
 when@test:

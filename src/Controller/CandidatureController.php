@@ -119,6 +119,7 @@ class CandidatureController extends AbstractController
                 $transaction->setSomme($bienSomme);
                 $transaction->setCreatedAt(new \DateTimeImmutable());
                 $transaction->setUpdateAt(new \DateTimeImmutable());
+                $transaction->setIsDeleted(false);
             }
             elseif($bienStatut == "A vendre"){
                 $transaction->setTypeTransaction($typeAchat);
@@ -129,6 +130,7 @@ class CandidatureController extends AbstractController
                 $transaction->setSomme($bienSomme);
                 $transaction->setCreatedAt(new \DateTimeImmutable());
                 $transaction->setUpdateAt(new \DateTimeImmutable());
+                $transaction->setIsDeleted(false);
             }else{
                 throw new \Exception("Attention ce bien n'a pas de statut");
             }

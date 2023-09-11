@@ -82,6 +82,24 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             return $query->getResult();
         }
 
+        public function findUsersWithParent()
+        {
+            return $this->createQueryBuilder('u')
+                ->where('u.parent IS NOT NULL')
+                ->getQuery()
+                ->getResult();
+        }
+
+        // public function findByUserAgence($id){
+        //     $qb = $this->getDoctrine()->getRepository('App\Entity\User')->createQueryBuilder();
+        //     $qb->select('u')
+        //         ->from('App\Entity\User', 'u')
+        //         ->where('u.parent = :user')
+        //         ->andWhere('u.age > 18')
+        //         ->setParameter('user', $id);
+
+        //         return $qb->getQuery()->getResult();
+        // }
 
     // public function findUsersByRole($role): array
     // {

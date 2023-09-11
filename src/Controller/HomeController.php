@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Adresse;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Repository\BienImmoRepository;
 use App\Repository\TransactionRepository;
@@ -13,16 +14,18 @@ use App\Repository\UserRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\PhotoDocumentRepository;
 use App\Entity\Document;
+use App\Entity\UserAdresse;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileUploader;
+use Symfony\Component\Security\Http\Attribute\IsGranted as AttributeIsGranted;
+
 #[Route('/api', name: 'api_')]
 class HomeController extends AbstractController
 {
@@ -33,6 +36,110 @@ class HomeController extends AbstractController
         $response = new Response( json_encode( array( 'Utilisateurs' => $users ) ) );
         return $response;
     }
+
+    #[Route('/user/child/create', name: 'app_child_user',methods: ['POST'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
+    public function test(#[CurrentUser] User $user,Request $request,UserPasswordHasherInterface $userPasswordHasher,EntityManagerInterface $entityManager): Response
+    {
+        $agent = new User();
+        $adresse = new UserAdresse();
+
+        $alphanum = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+        $pass = array();
+        $alphaLength = strlen($alphanum) - 1;
+        for ($i = 0; $i < 8; $i++) {
+            $n = rand(0, $alphaLength);
+            $pass[] = $alphanum[$n];
+        }
+        $password = implode($pass);
+
+        $agent->setNom($request->request->get('nom'));
+        $agent->setEmail($request->request->get('email'));
+        $agent->setRoles(['ROLE_AGENT']);
+        $agent->setPassword($userPasswordHasher->hashPassword($agent,$password));
+        $agent->setTelephone($request->request->get('telephone'));
+        if($user->isIsCertified() == true)
+        {
+            $agent->setIsCertified(true);
+        }else{
+            $agent->setIsCertified(false);
+        }
+        $agent->setIsVerified(true);
+        $agent->setCreatedAt(new \DateTimeImmutable());
+        $agent->setUpdateAt(new \DateTimeImmutable());
+
+        $adresse->setQuartier($request->request->get('quartier'));
+        $agent->addUserAdress($adresse);
+        $user->addChild($agent);
+        if ($request->getMethod() == Request::METHOD_POST)
+        {
+            $entityManager->getConnection()->beginTransaction();
+            try {
+                $entityManager->persist($agent);
+                $entityManager->persist($adresse);
+                $entityManager->persist($user);
+                $entityManager->flush();
+                $entityManager->commit();
+            } catch (\Exception $e) {
+                $entityManager->rollback();
+                throw $e;
+            }
+        return $this->json(['message' => 'Agent ajouter avec succès','Email'=>$agent->getEmail(),'Mot_de_passe'=>$password]);
+        }
+
+        return $this->json(['message' => 'Il y a une erreur'],Response::HTTP_BAD_REQUEST);
+    }
+
+    // SUPPRIMER UN AGENT
+    #[Route('/user/child/delete/{id}', name: 'app_delete_agent',methods: ['POST'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
+    #[AttributeIsGranted('ROLE_SUPER_ADMIN')]
+    public function Delete (#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,int $id,
+    BienImmoRepository $bienImmoRepository): Response
+    {
+        // $bien = $bienImmoRepository->find($id);
+
+        $agent = $userRepository->findOneBy(['id' => $id,'parent' => $user ]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur' => $agent]);
+
+        foreach($bienImmo as $bien){
+            $bien->setUtilisateur($user);
+        }
+        $entityManager->remove($agent);
+        $entityManager->flush();
+
+        return $this->json(['message' => 'Suppression effectue succès'], Response::HTTP_OK);
+    }
+
+    // AFFICHER LA LISTE DES AGENT
+    #[Route('/user/child/get', name: 'app_get_agent',methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
+    public function getAgent (#[CurrentUser] User $user,UserRepository $userRepository): Response
+    {
+
+        $user = $userRepository->find($user->getId());
+        $agent =  $user->getChildren();
+
+        $response = new Response( json_encode( array( 'agents' => $agent ) ) );
+        return $response;
+    }
+
+    // AFFICHER LA LISTE DES AGENT EN FONCTION DE L'ID DE L'AGENCE
+    #[Route('/user/child/get/{id}', name: 'app_get_agent_by_agence',methods: ['GET'])]
+    public function getAgentByAgence (UserRepository $userRepository,int $id): Response
+    {
+
+        $agent = $userRepository->findBy(['parent'=>$id]);
+
+        $agents = [];
+        foreach($agent as $agt){
+            $agents[] = $agt;
+        }
+
+        $response = new Response( json_encode( array( 'agents' => $agents ) ) );
+        return $response;
+    }
+
 
     #[Route('/user/update', name: 'update_app_user',methods: ['POST'])]
     public function Update (#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager): Response

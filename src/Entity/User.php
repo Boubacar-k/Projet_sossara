@@ -40,7 +40,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?string $nom = null;
 
-
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\NotBlank]
     // #[Groups(['user:read', 'user:create', 'user:update'])]
@@ -97,6 +96,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     // #[Groups(['user:read', 'user:create', 'user:update'])]
     private ?string $photo = null;
 
+    #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'parent')]
+    private Collection $children;
+
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'children')]
+    private User|null $parent = null;
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -127,6 +131,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Favoris::class)]
     private Collection $favoris;
 
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $deleteAt = null;
+
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: UserAdresse::class)]
+    private Collection $userAdresses;
+
     public function __construct()
     {
         $this->bienImmos = new ArrayCollection();
@@ -142,6 +153,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         $this->alertes = new ArrayCollection();
         $this->blogs = new ArrayCollection();
         $this->favoris = new ArrayCollection();
+        $this->children = new ArrayCollection();
+        $this->userAdresses = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -443,6 +456,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     }
 
     public function jsonSerialize() {
+        $favoris = [];
+        foreach ($this->favoris as $favori) {
+            $favoris[] = [
+                'id' => $favori->getId(),
+            ];
+        }
+        $children = [];
+        foreach ($this->children as $child) {
+            $children[] = [
+                'id' => $child->getId(),
+                // Autres propriétés de l'enfant à inclure si nécessaire
+            ];
+        }
+        $adresse = [];
+        foreach ($this->userAdresses as $add) {
+            $adresse[] = [
+                'id' => $add->getId(),
+                'nom' => $add->getQuartier(),
+            ];
+        }
         return [
             'id' => $this->id,
             'nom' => $this->nom,
@@ -451,7 +484,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             'telephone' => $this->telephone,
             'dateNaissance' => $this->dateNaissance,
             'photo' => $this->photo,
-            'is_certified' => $this->is_certified
+            'is_certified' => $this->is_certified,
+            'favoris' => $favoris,
+            'agent' => $children,
+            'parent' => $this->parent ? $this->parent->getId() : null,
+            'adresse' => $adresse
         ];
     }
 
@@ -712,6 +749,93 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             // set the owning side to null (unless already changed)
             if ($favori->getUtilisateur() === $this) {
                 $favori->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getParent(): ?User
+    {
+        return $this->parent;
+    }
+
+    public function setParent(?User $parent): self
+    {
+        $this->parent = $parent;
+
+        return $this;
+    }
+
+    public function getChildren()
+    {
+        
+        $children = [];
+        foreach ($this->children as $child) {
+            $children[] = [
+                'id' => $child->getId(),
+                'nom' => $child->getNom(),
+                'email' => $child->getEmail(),
+                'roles' => $child->getRoles(),
+                'telephone' => $child->getTelephone(),
+                'dateNaissance' => $child->getDateNaissance(),
+                'photo' => $child->getPhoto(),
+                'is_certified' => $child->isIsCertified(),
+                'adresse' => $child->getUserAdresses()
+            ];
+        }
+        return $children;
+    }
+
+    public function addChild(User $child)
+    {
+        $this->children[] = $child;
+        $child->setParent($this);
+    }
+
+    public function getDeleteAt(): ?\DateTimeImmutable
+    {
+        return $this->deleteAt;
+    }
+
+    public function setDeleteAt(?\DateTimeImmutable $deleteAt): static
+    {
+        $this->deleteAt = $deleteAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, UserAdresse>
+     */
+    public function getUserAdresses()
+    {
+        $adresse = [];
+        foreach ($this->userAdresses as $add) {
+            $adresse[] = [
+                'id' => $add->getId(),
+                'nom' => $add->getQuartier(),
+            ];
+        }
+        return $adresse;
+    }
+
+    public function addUserAdress(UserAdresse $userAdress): static
+    {
+        if (!$this->userAdresses->contains($userAdress)) {
+            $this->userAdresses->add($userAdress);
+            $userAdress->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserAdress(UserAdresse $userAdress): static
+    {
+        if ($this->userAdresses->removeElement($userAdress)) {
+            // set the owning side to null (unless already changed)
+            if ($userAdress->getUtilisateur() === $this) {
+                $userAdress->setUtilisateur(null);
             }
         }
 

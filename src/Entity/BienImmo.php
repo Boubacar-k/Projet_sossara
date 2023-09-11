@@ -279,6 +279,12 @@ class BienImmo implements \JsonSerializable
                 'icone' => $commodite->getIcone()
             ];
         }
+        $favoris = [];
+        foreach ($this->favoris as $favori) {
+            $favoris[] = [
+                'id' => $favori->getId(),
+            ];
+        }
         
         return [
             'id' => $this->id,
@@ -298,7 +304,8 @@ class BienImmo implements \JsonSerializable
             'adresse' => $this->adresse,
             'createdAt' => $this->createdAt,
             'updateAt' => $this->updateAt,
-            'commodite' => $commodites
+            'commodite' => $commodites,
+            'favoris' => $favoris,
         ];
     }
 

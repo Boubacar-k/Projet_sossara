@@ -55,6 +55,7 @@ class Favoris implements \JsonSerializable
         return [
             'id' => $this->id,
             'utilisateurs' => $this->utilisateur,
+            'bien' => $this->bien,
         ];
     }
 }

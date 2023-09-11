@@ -44,6 +44,9 @@ class Transaction implements \JsonSerializable
     #[ORM\Column]
     private ?\DateTimeImmutable $updateAt = null;
 
+    #[ORM\Column(nullable: false)]
+    private ?bool $isDeleted = null;
+
     public function __construct()
     {
         $this->paiements = new ArrayCollection();
@@ -202,5 +205,17 @@ class Transaction implements \JsonSerializable
             'createdAt' => $this->createdAt,
             'updateAt' => $this->updateAt,
         ];
+    }
+
+    public function isIsDeleted(): ?bool
+    {
+        return $this->isDeleted;
+    }
+
+    public function setIsDeleted(?bool $isDeleted): static
+    {
+        $this->isDeleted = $isDeleted;
+
+        return $this;
     }
 }
