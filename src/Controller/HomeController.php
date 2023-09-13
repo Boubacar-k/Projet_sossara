@@ -15,6 +15,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\PhotoDocumentRepository;
 use App\Entity\Document;
 use App\Entity\UserAdresse;
+use App\Repository\UserAdresseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -24,6 +25,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileUploader;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted as AttributeIsGranted;
 
 #[Route('/api', name: 'api_')]
@@ -39,7 +44,8 @@ class HomeController extends AbstractController
 
     #[Route('/user/child/create', name: 'app_child_user',methods: ['POST'])]
     #[AttributeIsGranted('ROLE_AGENCE')]
-    public function test(#[CurrentUser] User $user,Request $request,UserPasswordHasherInterface $userPasswordHasher,EntityManagerInterface $entityManager): Response
+    public function test(#[CurrentUser] User $user,Request $request,UserPasswordHasherInterface $userPasswordHasher,MailerInterface $mailer,
+    EntityManagerInterface $entityManager,UrlGeneratorInterface $urlGeneratorInterface): Response
     {
         $agent = new User();
         $adresse = new UserAdresse();
@@ -52,6 +58,8 @@ class HomeController extends AbstractController
             $pass[] = $alphanum[$n];
         }
         $password = implode($pass);
+
+        // $password =  'pass_'.str_replace(' ','_',$user->getNom()).'_123'; 
 
         $agent->setNom($request->request->get('nom'));
         $agent->setEmail($request->request->get('email'));
@@ -84,7 +92,21 @@ class HomeController extends AbstractController
                 $entityManager->rollback();
                 throw $e;
             }
-        return $this->json(['message' => 'Agent ajouter avec succès','Email'=>$agent->getEmail(),'Mot_de_passe'=>$password]);
+            $confirmationUrl = $this->generateUrl('api_app_angular_redirect', [], $urlGeneratorInterface::ABSOLUTE_URL);
+            $userEmail = $agent->getEmail();
+            $endEmail = (new TemplatedEmail())
+                ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
+                ->to($agent->getEmail())
+                ->subject('informations sur votre compte')
+                ->htmlTemplate('admin/agent_compte.html.twig')
+                ->context([
+                    'userEmail' => $userEmail,
+                    'password' => $password,
+                    'confirmationUrl' => $confirmationUrl
+                ]);;
+
+                $mailer->send($endEmail);
+            return $this->json(['message' => 'Agent ajouter avec succès','Email'=>$agent->getEmail(),'Mot_de_passe'=>$password]);
         }
 
         return $this->json(['message' => 'Il y a une erreur'],Response::HTTP_BAD_REQUEST);
@@ -93,18 +115,19 @@ class HomeController extends AbstractController
     // SUPPRIMER UN AGENT
     #[Route('/user/child/delete/{id}', name: 'app_delete_agent',methods: ['POST'])]
     #[AttributeIsGranted('ROLE_AGENCE')]
-    #[AttributeIsGranted('ROLE_SUPER_ADMIN')]
     public function Delete (#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,int $id,
-    BienImmoRepository $bienImmoRepository): Response
+    BienImmoRepository $bienImmoRepository,UserAdresseRepository $userAdresseRepository): Response
     {
         // $bien = $bienImmoRepository->find($id);
 
         $agent = $userRepository->findOneBy(['id' => $id,'parent' => $user ]);
+        $adress = $userAdresseRepository->findOneBy(['utilisateur' => $agent->getId()]);
         $bienImmo = $bienImmoRepository->findBy(['utilisateur' => $agent]);
 
         foreach($bienImmo as $bien){
             $bien->setUtilisateur($user);
         }
+        $entityManager->remove($adress);
         $entityManager->remove($agent);
         $entityManager->flush();
 
@@ -117,10 +140,24 @@ class HomeController extends AbstractController
     public function getAgent (#[CurrentUser] User $user,UserRepository $userRepository): Response
     {
 
-        $user = $userRepository->find($user->getId());
-        $agent =  $user->getChildren();
+        
+        $agent = $userRepository->findBy(['parent'=>$user->getId()]);
 
-        $response = new Response( json_encode( array( 'agents' => $agent ) ) );
+        $agents = [];
+        foreach($agent as $agt){
+            $agents[] = [
+                'id' => $agt->getId(),
+                'username' => $agt->getnom(),
+                'email' => $agt->getEmail(),
+                'date_de_naissance' => $agt->getDateNaissance(),
+                'telephone' => $agt->getTelephone(),
+                'role' => $agt->getRoles(),
+                'photo' => $agt->getPhoto(),
+                'agence' => $agt->getParent(),
+                'adresse' => $agt->getUserAdresses() 
+            ];
+        }
+        $response = new Response( json_encode( array( 'agents' => $agents ) ) );
         return $response;
     }
 
@@ -133,8 +170,19 @@ class HomeController extends AbstractController
 
         $agents = [];
         foreach($agent as $agt){
-            $agents[] = $agt;
+            $agents[] = [
+                'id' => $agt->getId(),
+                'username' => $agt->getnom(),
+                'email' => $agt->getEmail(),
+                'date_de_naissance' => $agt->getDateNaissance(),
+                'telephone' => $agt->getTelephone(),
+                'role' => $agt->getRoles(),
+                'photo' => $agt->getPhoto(),
+                'agence' => $agt->getParent(),
+                'adresse' => $agt->getUserAdresses() 
+            ];
         }
+        
 
         $response = new Response( json_encode( array( 'agents' => $agents ) ) );
         return $response;

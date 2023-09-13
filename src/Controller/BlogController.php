@@ -8,7 +8,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\BlogRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Http\Attribute\IsGranted as AttributeIsGranted;
 use Symfony\Component\HttpFoundation\Request;
 use App\Service\FileUploader;
 use App\Entity\Blog;
@@ -34,8 +34,9 @@ class BlogController extends AbstractController
         return $response;
     }
 
+    // CREER UN BLOG
     #[Route('/blog/add', name: 'app_add_new_blog', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[AttributeIsGranted('ROLE_ADMIN')]
     public function AddBlog(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,FileUploader $fileUploader): Response
     {
         $blog = new Blog();
@@ -66,8 +67,9 @@ class BlogController extends AbstractController
         ]);
     }
 
+    // MODIFIER UN BLOG
     #[Route('/blog/update/{id}', name: 'app_update_blog', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[AttributeIsGranted('ROLE_ADMIN')]
     public function UpdateBlog(#[CurrentUser] User $user,Request $request,BlogRepository $blogRepository,EntityManagerInterface $entityManager,int $id,
     FileUploader $fileUploader): Response
     {
@@ -97,5 +99,19 @@ class BlogController extends AbstractController
         return $this->json([
             'erreur' => "erreur de publication",
         ]);
+    }
+
+
+    // SUPPRIMER UN BLOG
+    #[Route('/blog/delete/{id}', name: 'app_delete_blog', methods: ['POST'])]
+    #[AttributeIsGranted('ROLE_ADMIN')]
+    public function deleteBlog(#[CurrentUser] User $user,BlogRepository $blogRepository,EntityManagerInterface $entityManager,int $id): Response
+    {
+        $blog = $blogRepository->findOneBy(['id' => $id,'utilisateur' => $user]);
+
+        $entityManager->remove($blog);
+        $entityManager->flush();
+
+        return $this->json(['message' => 'Suppression effectue succès'], Response::HTTP_OK);
     }
 }

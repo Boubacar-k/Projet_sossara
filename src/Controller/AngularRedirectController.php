@@ -17,4 +17,12 @@ class AngularRedirectController extends AbstractController
         $angularUrl = 'http://localhost:4200/auth/connexion'; // Remplacez par l'URL de votre page Angular
         return $this->redirect($angularUrl);
     }
+
+    #[Route('/angular/redirect_to reset', name: 'app_angular_redirect_reset')]
+    public function redirectToAngularReset(Request $request): RedirectResponse
+    {
+        $token = $request->get('token');
+        $angularUrl = 'http://localhost:4200/reset-password/'.$token; // Remplacez par l'URL de votre page Angular
+        return $this->redirect($angularUrl);
+    }
 }

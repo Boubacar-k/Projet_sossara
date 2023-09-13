@@ -89,7 +89,6 @@ class BienImmoController extends AbstractController
     }
     // ENDPOINT POUR L'ENREGISTREMENT OU PUBLICATION D'UN BIEN
     #[Route('/bien/immo/new', name: 'app_new_immo')]
-    // #[IsGranted('ROLE_USER')]
     public function createBienImmo(
         #[CurrentUser] User $user,
         Request $request, EntityManagerInterface $entityManager,PaysRepository $paysRepository, RegionRepository $regionRepository,
@@ -858,6 +857,70 @@ class BienImmoController extends AbstractController
 
         $response = new Response( json_encode( array( 'biens_agents' => $biens, 'biens_agences' => $bien_immos) ) );
         return $response;
+    }
+
+    // LISTE DES BIENS EN LOCATION EN FONCTION DE L'UTILISATEUR CONNECTE (AGENCE NB: CELUI A QUI LE BIEN APPARTIENT)
+    #[Route('/bien/immo/agence/get/rent', name: 'app_bien_immo_agence_rent',methods: ['GET'])]
+    public function getBienAgenceRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
+    UserRepository $userRepository): Response
+    {
+        $agent = $userRepository->findBy(['parent'=>$user->getId()]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        $biens= [];
+ 
+             foreach ($bienImmo as $bien) {
+                 $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                 foreach($transaction as $transac){
+                     $biens[] = $transac;
+                 }
+             }
+
+            $agentBiens= [];
+            foreach ($agent as $agt) {
+                $agentBienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+                foreach($agentBienImmo as $bien){
+                    $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                    foreach($transaction as $transac){
+                        $agentBiens[] = $transac;
+                    }
+                }
+                
+            }
+         
+         $response = new Response( json_encode( array( 'biens' => $biens,'agent_bien' => $agentBiens) ) );
+         return $response;
+    }
+
+    // LISTE DES BIENS VENDU EN FONCTION DE L'UTILISATEUR CONNECTE (AGENCE NB: CELUI A QUI LE BIEN APPARTIENT)
+    #[Route('/bien/immo/agence/get/sell', name: 'app_bien_immo_agence_sell',methods: ['GET'])]
+    public function getBienAgenceSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
+    UserRepository $userRepository): Response
+    {
+        $agent = $userRepository->findBy(['parent'=>$user->getId()]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+        $biens= [];
+ 
+             foreach ($bienImmo as $bien) {
+                 $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                 foreach($transaction as $transac){
+                     $biens[] = $transac;
+                 }
+             }
+
+            $agentBiens= [];
+            foreach ($agent as $agt) {
+                $agentBienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+                foreach($agentBienImmo as $bien){
+                    $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                    foreach($transaction as $transac){
+                        $agentBiens[] = $transac;
+                    }
+                }
+                
+            }
+         
+         $response = new Response( json_encode( array( 'biens' => $biens,'agent_bien' => $agentBiens) ) );
+         return $response;
     }
 
 }

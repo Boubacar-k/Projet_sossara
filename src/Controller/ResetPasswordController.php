@@ -72,7 +72,9 @@ class ResetPasswordController extends AbstractController
         return $this->json([
             'resetToken' => $resetToken,
         ]);
+
     }
+
 
     /**
      * Validates and process the reset URL that the user clicked in their email.
@@ -80,15 +82,16 @@ class ResetPasswordController extends AbstractController
     #[Route('/reset/{token}', name: 'api_app_reset_password')]
     public function reset(Request $request, UserPasswordHasherInterface $passwordHasher, TranslatorInterface $translator, string $token = null): Response
     {
-        if ($token) {
-            // We store the token in session and remove it from the URL, to avoid the URL being
-            // loaded in a browser and potentially leaking the token to 3rd party JavaScript.
-            $this->storeTokenInSession($token);
+        // if ($token) {
+        //     // We store the token in session and remove it from the URL, to avoid the URL being
+        //     // loaded in a browser and potentially leaking the token to 3rd party JavaScript.
+        //     // $this->storeTokenInSession($token);
 
-            return $this->redirectToRoute('api_app_reset_password');
-        }
+        //     return $this->redirectToRoute('api_app_reset_password');
+        // }
 
-        $token = $this->getTokenFromSession();
+        // $token = $this->getTokenFromSession();
+        $token = $request->get('token');
 
         if (null === $token) {
             throw $this->createNotFoundException('No reset password token found in the URL or in the session.');
@@ -127,7 +130,7 @@ class ResetPasswordController extends AbstractController
             $this->entityManager->flush();
 
             // The session is cleaned up after the password has been changed.
-            $this->cleanSessionAfterReset();
+            // $this->cleanSessionAfterReset();
 
             return $this->json([
                 'message' => "mot de passe modifie avec succes",
@@ -135,9 +138,11 @@ class ResetPasswordController extends AbstractController
         }
 
         return $this->json([
-            'message' => "erreur : quelque chose s'est mal passe",
-        ]);
+            'success' => false,
+            'message' => 'Le formulaire est invalide.',
+        ], 400);
     }
+    
 
     private function processSendingPasswordResetEmail(string $emailFormData,JWTTokenManagerInterface $jwtManager, MailerInterface $mailer, TranslatorInterface $translator): Response
     {
@@ -166,10 +171,11 @@ class ResetPasswordController extends AbstractController
             return $this->json(['message' => 'Error generating reset token.'], Response::HTTP_BAD_REQUEST);
         }
 
+        
         $email = (new TemplatedEmail())
             ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
             ->to($user->getEmail())
-            ->subject('Your password reset request')
+            ->subject('Votre demande de réinitialisation de mot de passe')
             ->htmlTemplate('reset_password/email.html.twig')
             ->context([
                 'resetToken' => $resetToken,

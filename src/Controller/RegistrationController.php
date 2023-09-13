@@ -132,7 +132,7 @@ class RegistrationController extends AbstractController
             $email = (new TemplatedEmail())
                 ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
                 ->to($user->getEmail())
-                ->subject('Please Confirm your Email')
+                ->subject('Veuillez confirmer votre email')
                 ->htmlTemplate('registration/confirmation_email.html.twig')
                 ->context([
                     'confirmationUrl' => $confirmationUrl,
