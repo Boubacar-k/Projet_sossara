@@ -20,12 +20,16 @@ class Role
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'role')]
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'roles')]
     private Collection $users;
+
+    #[ORM\ManyToMany(targetEntity: Permission::class, mappedBy: 'roles')]
+    private Collection $permissions;
 
     public function __construct()
     {
         $this->users = new ArrayCollection();
+        $this->permissions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -41,6 +45,57 @@ class Role
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
+
+    public function addUser(User $user): static
+    {
+        if (!$this->users->contains($user)) {
+            $this->users->add($user);
+        }
+
+        return $this;
+    }
+
+    public function removeUser(User $user): static
+    {
+        $this->users->removeElement($user);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Permission>
+     */
+    public function getPermissions(): Collection
+    {
+        return $this->permissions;
+    }
+
+    public function addPermission(Permission $permission): static
+    {
+        if (!$this->permissions->contains($permission)) {
+            $this->permissions->add($permission);
+            $permission->addRole($this);
+        }
+
+        return $this;
+    }
+
+    public function removePermission(Permission $permission): static
+    {
+        if ($this->permissions->removeElement($permission)) {
+            $permission->removeRole($this);
+        }
 
         return $this;
     }

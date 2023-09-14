@@ -25,6 +25,7 @@ use App\Repository\PeriodeRepository;
 use App\Repository\PhotoDocumentRepository;
 use App\Repository\ProblemeRepository;
 use App\Repository\RegionRepository;
+use App\Repository\RoleRepository;
 use App\Repository\TransactionRepository;
 use App\Repository\TypeImmoRepository;
 use App\Repository\TypeProblemeRepository;
@@ -52,7 +53,7 @@ class AdminController extends AbstractController
     #[Route('/user/create', name: 'app_create_user', methods: ['POST'],)]
     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function createUser(#[CurrentUser] User $admin,Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader,
-    EntityManagerInterface $entityManager): Response
+    EntityManagerInterface $entityManager,RoleRepository $roleRepository): Response
     {
         $user = new User();
         $document = new Document();
@@ -64,14 +65,22 @@ class AdminController extends AbstractController
         $newRoles = $newRoles;
     
         if ($newRoles === 'PROPRIETAIRE') {
-            $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $roles = $roleRepository->find(5);
+            // $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $user->addRole($roles);
         } elseif ($newRoles === 'ADMINISTRATEUR') {
-            $user->setRoles(['ROLE_ADMIN']);
+            $roles = $roleRepository->find(2);
+            // $user->setRoles(['ROLE_ADMIN']);
+            $user->addRole($roles);
         }elseif ($newRoles === 'AGENCE') {
-            $user->setRoles(['ROLE_AGENCE']);
+            $roles = $roleRepository->find(3);
+            // $user->setRoles(['ROLE_AGENCE']);
+            $user->addRole($roles);
         }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
-            $user->setRoles(['ROLE_LOCATAIRE']);
-        } else {
+            $roles = $roleRepository->find(6);
+            // $user->setRoles(['ROLE_LOCATAIRE']);
+            $user->addRole($roles);
+        }  else {
 
             return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
         }
@@ -161,7 +170,7 @@ class AdminController extends AbstractController
     #[Route('/user/updtate/{id}', name: 'app_update_user', methods: ['POST'],)]
     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function modifyUser(#[CurrentUser] User $admin,Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader,
-    EntityManagerInterface $entityManager,UserRepository $userRepository,DocumentRepository $documentRepository,int $id): Response
+    EntityManagerInterface $entityManager,UserRepository $userRepository,DocumentRepository $documentRepository,int $id,RoleRepository $roleRepository): Response
     {
         $user = $userRepository->find($id);
 
@@ -172,14 +181,22 @@ class AdminController extends AbstractController
         $newRoles = $newRoles;
     
         if ($newRoles === 'PROPRIETAIRE') {
-            $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $roles = $roleRepository->find(5);
+            // $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $user->addRole($roles);
         } elseif ($newRoles === 'ADMINISTRATEUR') {
-            $user->setRoles(['ROLE_ADMIN']);
+            $roles = $roleRepository->find(2);
+            // $user->setRoles(['ROLE_ADMIN']);
+            $user->addRole($roles);
         }elseif ($newRoles === 'AGENCE') {
-            $user->setRoles(['ROLE_AGENCE']);
+            $roles = $roleRepository->find(3);
+            // $user->setRoles(['ROLE_AGENCE']);
+            $user->addRole($roles);
         }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
-            $user->setRoles(['ROLE_LOCATAIRE']);
-        } else {
+            $roles = $roleRepository->find(6);
+            // $user->setRoles(['ROLE_LOCATAIRE']);
+            $user->addRole($roles);
+        }  else {
 
             return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);
         }
@@ -228,7 +245,6 @@ class AdminController extends AbstractController
     }
     // AFFICHER LES UTILISATEURS
     #[Route('/users/get', name: 'app_get_user',methods: ['GET'])]
-    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getUsers(#[CurrentUser] User $user,UserRepository $userRepository): Response
     {

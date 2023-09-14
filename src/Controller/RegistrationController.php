@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\Document;
 use App\Entity\PhotoDocument;
+use App\Repository\RoleRepository;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
@@ -54,7 +55,7 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register', methods: ['POST'],)]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader, 
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader,RoleRepository $roleRepository, 
     UrlGeneratorInterface $urlGeneratorInterface, AppCustomAuthenticator $authenticator, EntityManagerInterface $entityManager): Response
     {
         $user = new User();
@@ -69,11 +70,17 @@ class RegistrationController extends AbstractController
         $newRoles = $newRoles;
     
         if ($newRoles === 'PROPRIETAIRE') {
-            $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $roles = $roleRepository->find(5);
+            // $user->setRoles(['ROLE_PROPRIETAIRE']);
+            $user->addRole($roles);
         } elseif ($newRoles === 'AGENCE') {
-            $user->setRoles(['ROLE_AGENCE']);
+            $roles = $roleRepository->find(3);
+            // $user->setRoles(['ROLE_AGENCE']);
+            $user->addRole($roles);
         }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
-            $user->setRoles(['ROLE_LOCATAIRE']);
+            $roles = $roleRepository->find(6);
+            // $user->setRoles(['ROLE_LOCATAIRE']);
+            $user->addRole($roles);
         } else {
 
             return $this->json(['message' => 'Rôle invalide'], Response::HTTP_BAD_REQUEST);

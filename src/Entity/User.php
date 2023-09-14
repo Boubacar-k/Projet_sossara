@@ -45,8 +45,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     // #[Groups(['user:read', 'user:create', 'user:update'])]
     protected ?string $email = null;
 
-    #[ORM\Column(type: 'json')]
-    private array $roles = [];
+    // #[ORM\Column(type: 'json')]
+    // private array $roles = [];
 
     /**
      * @var string The hashed password
@@ -138,6 +138,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: UserAdresse::class)]
     private Collection $userAdresses;
 
+    #[ORM\ManyToMany(targetEntity: Role::class, mappedBy: 'users')]
+    private Collection $roles;
+
 
     public function __construct()
     {
@@ -156,6 +159,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
         $this->favoris = new ArrayCollection();
         $this->children = new ArrayCollection();
         $this->userAdresses = new ArrayCollection();
+        $this->roles = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -190,19 +194,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
      */
     public function getRoles(): array
     {
-        $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+        $roleNames = $this->roles->map(fn ($role) => $role->getName())->toArray();
 
-        return array_unique($roles);
+        $roleNames[] = 'ROLE_USER';
+
+        return array_unique($roleNames);
     }
 
-    public function setRoles(array $roles): static
-    {
-        $this->roles = $roles;
+    // public function setRoles(array $roles): static
+    // {
+    //     $this->roles = $roles;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     /**
      * @see PasswordAuthenticatedUserInterface
@@ -481,7 +485,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             'id' => $this->id,
             'nom' => $this->nom,
             'email' => $this->email,
-            'roles' => $this->roles,
+            // 'roles' => $this->roles,
             'telephone' => $this->telephone,
             'dateNaissance' => $this->dateNaissance,
             'photo' => $this->photo,
@@ -838,6 +842,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
             if ($userAdress->getUtilisateur() === $this) {
                 $userAdress->setUtilisateur(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    // public function getRoles(): Collection
+    // {
+    //     return $this->roles;
+    // }
+
+    public function addRole(Role $role): static
+    {
+        if (!$this->roles->contains($role)) {
+            $this->roles->add($role);
+            $role->addUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRole(Role $role): static
+    {
+        if ($this->roles->removeElement($role)) {
+            $role->removeUser($this);
         }
 
         return $this;

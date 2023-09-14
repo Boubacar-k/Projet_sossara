@@ -15,6 +15,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\PhotoDocumentRepository;
 use App\Entity\Document;
 use App\Entity\UserAdresse;
+use App\Repository\RoleRepository;
 use App\Repository\UserAdresseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -45,11 +46,12 @@ class HomeController extends AbstractController
     #[Route('/user/child/create', name: 'app_child_user',methods: ['POST'])]
     #[AttributeIsGranted('ROLE_AGENCE')]
     public function test(#[CurrentUser] User $user,Request $request,UserPasswordHasherInterface $userPasswordHasher,MailerInterface $mailer,
-    EntityManagerInterface $entityManager,UrlGeneratorInterface $urlGeneratorInterface): Response
+    EntityManagerInterface $entityManager,UrlGeneratorInterface $urlGeneratorInterface,RoleRepository $roleRepository): Response
     {
         $agent = new User();
         $adresse = new UserAdresse();
 
+        $roles = $roleRepository->find(4);
         $alphanum = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
         $pass = array();
         $alphaLength = strlen($alphanum) - 1;
@@ -63,7 +65,7 @@ class HomeController extends AbstractController
 
         $agent->setNom($request->request->get('nom'));
         $agent->setEmail($request->request->get('email'));
-        $agent->setRoles(['ROLE_AGENT']);
+        $agent->addRole($roles);
         $agent->setPassword($userPasswordHasher->hashPassword($agent,$password));
         $agent->setTelephone($request->request->get('telephone'));
         if($user->isIsCertified() == true)
