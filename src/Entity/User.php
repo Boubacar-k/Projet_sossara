@@ -138,6 +138,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, \JsonSe
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: UserAdresse::class)]
     private Collection $userAdresses;
 
+
     public function __construct()
     {
         $this->bienImmos = new ArrayCollection();

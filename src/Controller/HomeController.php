@@ -188,7 +188,7 @@ class HomeController extends AbstractController
         return $response;
     }
 
-
+    // MODIFICATION DES INFORMATION DE L'UTILISATEUR
     #[Route('/user/update', name: 'update_app_user',methods: ['POST'])]
     public function Update (#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager): Response
     {
@@ -211,7 +211,14 @@ class HomeController extends AbstractController
                 throw $e;
             }
 
-            return $this->json(['message' => 'Utilisateur mis à jour avec succès'], Response::HTTP_OK);
+            $userInfo = [
+                'id' => $user->getId(),
+                'username' => $user->getnom(),
+                'email' => $user->getEmail(),
+                'date_de_naissance' => $user->getDateNaissance(),
+                'telephone' => $user->getTelephone(),
+            ];
+            return $this->json(['message' => 'Utilisateur mis à jour avec succès','user'=> $userInfo], Response::HTTP_OK);
         }
 
         return $this->json([
@@ -220,7 +227,7 @@ class HomeController extends AbstractController
 
     }
 
-
+    // MODIFIER LA PHOTO DE L'UTILISATEUR
     #[Route('/user/update/photo', name: 'app_user_update_photo', methods: ['POST'])]
     public function UpdatePhoto(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,FileUploader $fileUploader): Response
     {
@@ -242,7 +249,12 @@ class HomeController extends AbstractController
                 throw $e;
             }
 
-            return $this->json(['message' => 'Votre photo a ete mis à jour avec succès'], Response::HTTP_OK);
+            $userInfo = [
+                'id' => $user->getId(),
+                'photo' => $user->getPhoto(),
+            ];
+
+            return $this->json(['message' => 'Votre photo a ete mis à jour avec succès','photo' => $userInfo], Response::HTTP_OK);
         }
         return $this->json([
             'erreur' => "erreur de modification",
@@ -256,6 +268,7 @@ class HomeController extends AbstractController
     //     return $this->json(['photo' => $photo], Response::HTTP_OK);
     // }
 
+    // MODIFIER LE MOT DE PASSE DE L'UTILISATEUR
     #[Route('/user/password_reset', name: 'password_reset_app_user',methods: ['POST'])]
     public function reset (#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager,UserPasswordHasherInterface $userPasswordHasher): Response
     {
@@ -288,6 +301,7 @@ class HomeController extends AbstractController
 
     }
 
+    // RETOURNER LES LOCATAIRES DE L'UTILISATEUR
     #[Route('/user/bien/immo/rent/get', name: 'app_user_bien_immo_get_rent', methods: ['GET'])]
     public function getRentUser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -305,6 +319,39 @@ class HomeController extends AbstractController
         return $response;
     }
 
+    // RETOURNER LES LOCATAIRES DE L'UTILISATEUR (AGENCE)
+    #[Route('/user/agence/tenant/get', name: 'app_user_bien_immo_agence_get_rent', methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
+    public function getRentAgenceUser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
+    UserRepository $userRepository): Response
+    {
+        $locataire= [];
+
+        $agent = $userRepository->findBy(['parent'=>$user->getId()]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        foreach ($bienImmo as $bien) {
+            $transactions = $transactionRepository->findBy(['bien' => $bien->getId()]);
+            foreach($transactions as $transaction){
+                $locataire[] = $transaction->getUtilisateur();
+            }
+        }
+
+        $agentLocataire= [];
+        foreach ($agent as $agt){
+            $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+            foreach ($bienImmo as $bien) {
+                $transactions = $transactionRepository->findBy(['bien' => $bien->getId()]);
+                foreach($transactions as $transaction){
+                    $agentLocataire[] = $transaction->getUtilisateur();
+                }
+            }
+        }
+        
+        $response = new Response( json_encode( array( 'locataires' => $locataire,'locataires_agent' => $agentLocataire) ) );
+        return $response;
+    }
+
+    // RETOURNER LES ACHETEURS DE L'UTILISATEUR
     #[Route('/user/bien/immo/get/sell', name: 'app_user_bien_get_sell', methods: ['GET'])]
     public function getSellUser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
     {
@@ -322,6 +369,40 @@ class HomeController extends AbstractController
         return $response;
     }
 
+    // RETOURNER LES ACHETEURS DE L'UTILISATEUR (AGENCE)
+    #[Route('/user/agence/buyer/get', name: 'app_user_bien_agence_get_sell', methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
+    public function getSellAgenceUser(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
+    UserRepository $userRepository): Response
+    {
+        $locataire= [];
+
+        $agent = $userRepository->findBy(['parent'=>$user->getId()]);
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+        foreach ($bienImmo as $bien) {
+            $transactions = $transactionRepository->findBy(['bien' => $bien->getId()]);
+            // $locataire[] = $bien;
+            foreach($transactions as $transaction){
+                $locataire[] = $transaction->getUtilisateur();
+            }
+        }
+
+        $agentAcheteur= [];
+        foreach ($agent as $agt){
+            $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+            foreach ($bienImmo as $bien) {
+                $transactions = $transactionRepository->findBy(['bien' => $bien->getId()]);
+                foreach($transactions as $transaction){
+                    $agentAcheteur[] = $transaction->getUtilisateur();
+                }
+            }
+        }
+        $response = new Response( json_encode( array( 'locataire' => $locataire,'agent_acheteurs' => $agentAcheteur) ) );
+        return $response;
+    }
+
+
+    // RETOURNER LA LISTE DES AGENCES
     #[Route('/user/agence/get', name: 'app_get_agence',methods: ['GET'])]
     public function getUserAgence(UserRepository $userRepository,Request $request): Response
     {

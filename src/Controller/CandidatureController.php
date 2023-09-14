@@ -20,6 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/api', name: 'api_')]
 class CandidatureController extends AbstractController
 {
+    // ENVOYER UN CANDIDATURE POUR UN BIEN
     #[Route('/candidature/{id}', name: 'app_candidature',methods: ['POST'])]
     public function index(#[CurrentUser] User $user, Request $request,EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
     CandidatureRepository $candidatureRepository,int $id): Response
@@ -90,7 +91,7 @@ class CandidatureController extends AbstractController
         $bienSomme = $bien->getPrix();
         if($bienUser->getEmail() == $user->getEmail()){
             $candidature->setIsAccepted(true);
-            if($bienStatut == "A louer"){
+            if($bienStatut === "A louer"){
                 $transaction->setTypeTransaction($typeLocation);
                 $bien->setIsRent(true);
                 if($periodeId == 1){
@@ -121,7 +122,7 @@ class CandidatureController extends AbstractController
                 $transaction->setUpdateAt(new \DateTimeImmutable());
                 $transaction->setIsDeleted(false);
             }
-            elseif($bienStatut == "A vendre"){
+            elseif($bienStatut === "A vendre"){
                 $transaction->setTypeTransaction($typeAchat);
                 $bien->setIsSell(true);
                 $transaction->setBien($bien);

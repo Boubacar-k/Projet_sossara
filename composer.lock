@@ -7147,16 +7147,16 @@
         },
         {
             "name": "symfony/security-bundle",
-            "version": "v6.3.1",
+            "version": "v6.3.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/security-bundle.git",
-                "reference": "f4fe79d7ebafd406e1a6f646839bfbbed641d8b2"
+                "reference": "31957477b289220a47880ead3727bf5cc059fa08"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/security-bundle/zipball/f4fe79d7ebafd406e1a6f646839bfbbed641d8b2",
-                "reference": "f4fe79d7ebafd406e1a6f646839bfbbed641d8b2",
+                "url": "https://api.github.com/repos/symfony/security-bundle/zipball/31957477b289220a47880ead3727bf5cc059fa08",
+                "reference": "31957477b289220a47880ead3727bf5cc059fa08",
                 "shasum": ""
             },
             "require": {
@@ -7166,6 +7166,7 @@
                 "symfony/clock": "^6.3",
                 "symfony/config": "^6.1",
                 "symfony/dependency-injection": "^6.2",
+                "symfony/deprecation-contracts": "^2.5|^3",
                 "symfony/event-dispatcher": "^5.4|^6.0",
                 "symfony/http-foundation": "^6.2",
                 "symfony/http-kernel": "^6.2",
@@ -7236,7 +7237,7 @@
             "description": "Provides a tight integration of the Security component into the Symfony full-stack framework",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/security-bundle/tree/v6.3.1"
+                "source": "https://github.com/symfony/security-bundle/tree/v6.3.4"
             },
             "funding": [
                 {
@@ -7252,7 +7253,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-06-21T12:08:28+00:00"
+            "time": "2023-08-25T08:46:23+00:00"
         },
         {
             "name": "symfony/security-core",

@@ -835,6 +835,7 @@ class BienImmoController extends AbstractController
 
     // AFFICHER LES BIENS EN FONCTION DE L'AGENCE CONNECTE ET DE SES AGENTS
     #[Route('/bien/immo/user/agence/get', name: 'app_get_bien_by_agence',methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
     public function getBienByAgence (#[CurrentUser] User $user,UserRepository $userRepository,BienImmoRepository $bienImmoRepository): Response
     {
 
@@ -861,6 +862,7 @@ class BienImmoController extends AbstractController
 
     // LISTE DES BIENS EN LOCATION EN FONCTION DE L'UTILISATEUR CONNECTE (AGENCE NB: CELUI A QUI LE BIEN APPARTIENT)
     #[Route('/bien/immo/agence/get/rent', name: 'app_bien_immo_agence_rent',methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
     public function getBienAgenceRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
     UserRepository $userRepository): Response
     {
@@ -893,6 +895,7 @@ class BienImmoController extends AbstractController
 
     // LISTE DES BIENS VENDU EN FONCTION DE L'UTILISATEUR CONNECTE (AGENCE NB: CELUI A QUI LE BIEN APPARTIENT)
     #[Route('/bien/immo/agence/get/sell', name: 'app_bien_immo_agence_sell',methods: ['GET'])]
+    #[AttributeIsGranted('ROLE_AGENCE')]
     public function getBienAgenceSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository,
     UserRepository $userRepository): Response
     {
@@ -909,7 +912,7 @@ class BienImmoController extends AbstractController
 
             $agentBiens= [];
             foreach ($agent as $agt) {
-                $agentBienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+                $agentBienImmo = $bienImmoRepository->findBy(['utilisateur'=>$agt->getId(),'deletedAt' => null,'is_rent' => false,'is_sell' => true]);
                 foreach($agentBienImmo as $bien){
                     $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
                     foreach($transaction as $transac){

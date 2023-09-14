@@ -36,6 +36,16 @@ class DocumentRepository extends ServiceEntityRepository
 //        ;
 //    }
 
+    public function findDocumentByUserId(int $userId)
+    {
+        $qb = $this->createQueryBuilder('d');
+        $qb->join('d.users', 'u')
+        ->where('u.id = :userId')
+        ->setParameter('userId', $userId)
+        ->orderBy('d.id', 'DESC');
+
+        return $qb->getQuery()->getResult();
+    }
 //    public function findOneBySomeField($value): ?Document
 //    {
 //        return $this->createQueryBuilder('d')

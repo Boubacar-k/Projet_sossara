@@ -22,6 +22,7 @@ use App\Repository\CommuneRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\PaysRepository;
 use App\Repository\PeriodeRepository;
+use App\Repository\PhotoDocumentRepository;
 use App\Repository\ProblemeRepository;
 use App\Repository\RegionRepository;
 use App\Repository\TransactionRepository;
@@ -42,13 +43,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\ExpressionLanguage\Expression;
 
 #[Route('/api/admin', name: 'api_admin')]
-#[AttributeIsGranted('ROLE_SUPER_ADMIN')]
 class AdminController extends AbstractController
 {
     // CREER UN UTILISATEUR
     #[Route('/user/create', name: 'app_create_user', methods: ['POST'],)]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function createUser(#[CurrentUser] User $admin,Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader,
     EntityManagerInterface $entityManager): Response
     {
@@ -157,6 +159,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN UTILISATEUR
     #[Route('/user/updtate/{id}', name: 'app_update_user', methods: ['POST'],)]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function modifyUser(#[CurrentUser] User $admin,Request $request, UserPasswordHasherInterface $userPasswordHasher,FileUploader $fileUploader,
     EntityManagerInterface $entityManager,UserRepository $userRepository,DocumentRepository $documentRepository,int $id): Response
     {
@@ -223,8 +226,65 @@ class AdminController extends AbstractController
             'erreur' => "erreur de modification",
         ]);
     }
+    // AFFICHER LES UTILISATEURS
+    #[Route('/users/get', name: 'app_get_user',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getUsers(#[CurrentUser] User $user,UserRepository $userRepository): Response
+    {
+        $users = $userRepository->findBy(['parent' => null]);
+
+        $usrs = [];
+        foreach($users as $usr){
+            $usrs[] = [
+                'id' => $usr->getId(),
+                'username' => $usr->getnom(),
+                'email' => $usr->getEmail(),
+                'date_de_naissance' => $usr->getDateNaissance(),
+                'telephone' => $usr->getTelephone(),
+                'role' => $usr->getRoles(),
+                'is_certified' => $usr->isIsCertified(),
+                'photo' => $usr->getPhoto(),
+                'agent' => $usr->getChildren(),
+            ];
+        }
+
+        $response = new Response( json_encode( array( 'users' => $usrs, ) ) );
+        return $response;
+    }
+    // AFFICHER LES DOCUMENTS D'UN UTILISATEUR
+    #[Route('/user/doc/get/{id}', name: 'app_get_user_doc',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getUserDoc(#[CurrentUser] User $user,UserRepository $userRepository,PhotoDocumentRepository $photoDocumentRepository,
+    DocumentRepository $documentRepository,int $id): Response
+    {
+        $users = $userRepository->find($id);
+
+        $documents = [];
+        $document = $documentRepository->findDocumentByUserId($users->getId()); 
+            foreach($document as $doc){
+                $photos = [];
+                foreach ($doc->getPhotoDocuments() as $photoDocument) {
+                    $photos[] = [
+                        'id' => $photoDocument->getId(),
+                        'nom' => $photoDocument->getNom(),
+                    ];
+                }
+                $documents[] = [
+                    'id' => $doc->getId(),
+                    'num_doc' => $doc->getNumDoc(),
+                    'nom' => $doc->getNom(),
+                    'photos' => $photos
+                ];
+            }
+
+        $response = new Response( json_encode( array( 'documents' => $documents, ) ) );
+        return $response;
+    }
+
     // SUPPRIMER UN UTILISATEUR
-    #[Route('/user', name: 'app_admin')]
+    #[Route('/user', name: 'app_admin',methods: ['POST'])]
+    #[AttributeIsGranted("ROLE_SUPER_ADMIN")]
     public function index(#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,
     BienImmoRepository $bienImmoRepository,int $id,TransactionRepository $transactionRepository): Response
     {
@@ -247,6 +307,7 @@ class AdminController extends AbstractController
 
     // SUPPRIMER UN AGENT
     #[Route('/user/child/delete/{id}', name: 'app_delete_agent',methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function DeleteAgent (#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,int $id,
     BienImmoRepository $bienImmoRepository,UserAdresseRepository $userAdresseRepository): Response
     {
@@ -268,6 +329,7 @@ class AdminController extends AbstractController
 
     // MODIFIER LE STATUS D'UN UTILISATEUR
     #[Route('/user/setCertify/{id}', name: 'app_setCertication_user',methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function userCertification (#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,int $id): Response
     {
         $user1 = $userRepository->find($id);
@@ -294,6 +356,7 @@ class AdminController extends AbstractController
 
     // BANIR D'UN UTILISATEUR
     #[Route('/user/banish/{id}', name: 'app_banish_user',methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function userBanish (#[CurrentUser] User $user,MailerInterface $mailer, EntityManagerInterface $entityManager,UserRepository $userRepository,
     int $id): Response
     {
@@ -327,6 +390,7 @@ class AdminController extends AbstractController
 
     // SUPPRIMER UN BIEN
     #[Route('/bien/immo/delete/{id}', name: 'app_delete_bienImmo',methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function Delete (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,int $id,
     TransactionRepository $transactionRepository): Response
     {
@@ -344,8 +408,19 @@ class AdminController extends AbstractController
         return $this->json(['message' => 'Suppression effectue succès'], Response::HTTP_OK);
     }
 
+    // RETOURNER LA LISTE DES AGENCES
+    #[Route('/user/agence/all/get', name: 'app_get_all_agence',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getUserAgence(UserRepository $userRepository): Response
+    {
+        $user = $userRepository->findUsersOfRoles(['ROLE_AGENCE']);
+        $response = new Response( json_encode( array( 'agences' => $user ) ) );
+        return $response;
+    }
+
     // LISTE DE TOUS LES AGENTS
     #[Route('/user/agent/get', name: 'app_all_agent_get',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getAgent (#[CurrentUser] User $user,UserRepository $userRepository): Response
     {
 
@@ -369,6 +444,7 @@ class AdminController extends AbstractController
 
      // CREER UN BLOG
      #[Route('/blog/add', name: 'app_add_new_blog', methods: ['POST'])]
+     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
      public function AddBlog(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,FileUploader $fileUploader): Response
      {
          $blog = new Blog();
@@ -401,6 +477,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN BLOG
     #[Route('/blog/update/{id}', name: 'app_update_blog', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateBlog(#[CurrentUser] User $user,Request $request,BlogRepository $blogRepository,EntityManagerInterface $entityManager,int $id,
     FileUploader $fileUploader): Response
     {
@@ -434,6 +511,7 @@ class AdminController extends AbstractController
 
     // SUPPRIMER UN BLOG
     #[Route('/blog/delete/{id}', name: 'app_delete_blog', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function deleteBlog(#[CurrentUser] User $user,BlogRepository $blogRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $blog = $blogRepository->find($id);
@@ -472,6 +550,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN PAYS
     #[Route('/country/update/{id}', name: 'app_update_country', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateCountry(#[CurrentUser] User $user,Request $request,PaysRepository $paysRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $pays = $paysRepository->find($id);
@@ -498,6 +577,7 @@ class AdminController extends AbstractController
 
     // AFFICHER UN PAYS
     #[Route('/country/get', name: 'app_get_country')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getPays(#[CurrentUser] User $user,PaysRepository $paysRepository): Response
     {
         $pays = $paysRepository->findAll();
@@ -519,6 +599,7 @@ class AdminController extends AbstractController
 
     // CREER UNE REGION
     #[Route('/region/add/{id}', name: 'app_add_new_region', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddRegion(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,PaysRepository $paysRepository,int $id): Response
     {
         $pays = $paysRepository->find($id);
@@ -546,6 +627,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UNE REGION
     #[Route('/region/update/{id}', name: 'app_update_regon', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateRegion(#[CurrentUser] User $user,Request $request,RegionRepository $regionRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $region = $regionRepository->find($id);
@@ -570,6 +652,7 @@ class AdminController extends AbstractController
 
     // AFFICHER UN REGION
     #[Route('/region/get', name: 'app_get_region')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getRegion(#[CurrentUser] User $user,RegionRepository $regionRepository): Response
     {
         $region = $regionRepository->findAll();
@@ -579,6 +662,7 @@ class AdminController extends AbstractController
 
     // CREER UNE COMMUNE
     #[Route('/commune/add/{id}', name: 'app_add_new_commune', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddCommune(#[CurrentUser] User $user,Request $request,RegionRepository $regionRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $commnue = new Commune();
@@ -605,6 +689,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UNE COMMUNE
     #[Route('/commune/update/{id}', name: 'app_update_commune', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateCommune(#[CurrentUser] User $user,Request $request,CommuneRepository $communeRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $commune = $communeRepository->find($id);
@@ -629,6 +714,7 @@ class AdminController extends AbstractController
 
     // AFFICHER UN COMMUNE
     #[Route('/commune/get', name: 'app_get_commune')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getCommune(#[CurrentUser] User $user,CommuneRepository $communeRepository): Response
     {
         $commune = $communeRepository->findAll();
@@ -638,6 +724,7 @@ class AdminController extends AbstractController
 
     // CREER UNE COMMODITE
     #[Route('/commodite/add', name: 'app_add_new_commodite', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddCommodite(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,FileUploader $fileUploader): Response
     {
         $commodite = new Commodite();
@@ -667,6 +754,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UNE COMMODITE
     #[Route('/commodite/update/{id}', name: 'app_update_commune', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateCommodite(#[CurrentUser] User $user,Request $request,CommoditeRepository $commoditeRepository,EntityManagerInterface $entityManager,
     FileUploader $fileUploader,int $id): Response
     {
@@ -697,6 +785,7 @@ class AdminController extends AbstractController
 
     // AFFICHER UN COMMODITES
     #[Route('/commodite/get', name: 'app_get_commodite')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getCommodite(#[CurrentUser] User $user,CommoditeRepository $commoditeRepository): Response
     {
         $commodite = $commoditeRepository->findAll();
@@ -707,6 +796,7 @@ class AdminController extends AbstractController
 
     // CREER UN TYPE DE BIEN
     #[Route('/type/bien/add', name: 'app_add_new_type_bien', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddTypeBien(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager): Response
     {
         $type = new TypeImmo();
@@ -732,6 +822,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN TYPE DE BIEN
     #[Route('/type/bien/update/{id}', name: 'app_update_type_bien', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateTypeBien(#[CurrentUser] User $user,Request $request,TypeImmoRepository $typeImmoRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $type = $typeImmoRepository->find($id);
@@ -756,6 +847,7 @@ class AdminController extends AbstractController
 
     // AFFICHER LES TYPES DE BIEN
     #[Route('/type/bien/get', name: 'app_get_type_probleme')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getTypeBien(#[CurrentUser] User $user,TypeImmoRepository $typeImmoRepository): Response
     {
         $type = $typeImmoRepository->findAll();
@@ -765,6 +857,7 @@ class AdminController extends AbstractController
 
     // CREER UNE UN TYPE DE PROBLEME
     #[Route('/type/probleme/add', name: 'app_add_new_type_probleme', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddTypeProbleme(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager): Response
     {
         $type = new TypeProbleme();
@@ -791,6 +884,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN TYPE DE PROBLEME
     #[Route('/type/probleme/update/{id}', name: 'app_update_type_probleme', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateTypeProbleme(#[CurrentUser] User $user,Request $request,TypeProblemeRepository $typeProblemeRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $type = $typeProblemeRepository->find($id);
@@ -816,6 +910,7 @@ class AdminController extends AbstractController
 
     // AFFICHER LES TYPES DE PROBLEME
     #[Route('/type/probleme/get', name: 'app_get_type_probleme')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getTypeProbleme(#[CurrentUser] User $user,ProblemeRepository $problemeRepository): Response
     {
         $type = $problemeRepository->findAll();
@@ -825,6 +920,7 @@ class AdminController extends AbstractController
 
     // CREER UNE UN TYPE DE TRANSACTION
     #[Route('/type/transaction/add', name: 'app_add_new_type_transaction', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function AddTypeTransaction(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager): Response
     {
         $type = new TypeTransaction();
@@ -849,6 +945,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UN TYPE DE TRANSACTION
     #[Route('/type/transaction/update/{id}', name: 'app_update_type_transaction', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdateTypeTransaction(#[CurrentUser] User $user,Request $request,TypeTransactionRepository $typeTransactionRepository,EntityManagerInterface $entityManager,int $id): Response
     {
         $type = $typeTransactionRepository->find($id);
@@ -873,6 +970,7 @@ class AdminController extends AbstractController
 
     // AFFICHER LES TYPES DE TRANSACTIONS
     #[Route('/type/transaction/get', name: 'app_get_transaction')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getTypeTransaction(#[CurrentUser] User $user,TypeTransactionRepository $typeTransactionRepository): Response
     {
         $type = $typeTransactionRepository->findAll();
@@ -905,6 +1003,7 @@ class AdminController extends AbstractController
 
     // MODIFIER UNE PERIODE
     #[Route('/periode/update', name: 'app_add_update_periode', methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function UpdatePeriode(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,PeriodeRepository $periodeRepository,int $id): Response
     {
         $periode = $periodeRepository->find($id);
@@ -928,6 +1027,7 @@ class AdminController extends AbstractController
     }
     // AFFICHER LES PERIODES
     #[Route('/periode/get', name: 'app_get_periode')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getPeriode(#[CurrentUser] User $user,PeriodeRepository $periodeRepository): Response
     {
         $periode = $periodeRepository->findAllExceptThis(6);

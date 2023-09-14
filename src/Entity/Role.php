@@ -20,11 +20,13 @@ class Role
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $roleName = null;
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'role')]
+    private Collection $users;
 
-    #[ORM\Column]
-    private ?bool $status = null;
+    public function __construct()
+    {
+        $this->users = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -39,30 +41,6 @@ class Role
     public function setName(string $name): static
     {
         $this->name = $name;
-
-        return $this;
-    }
-
-    public function getRoleName(): ?string
-    {
-        return $this->roleName;
-    }
-
-    public function setRoleName(string $roleName): static
-    {
-        $this->roleName = $roleName;
-
-        return $this;
-    }
-
-    public function isStatus(): ?bool
-    {
-        return $this->status;
-    }
-
-    public function setStatus(bool $status): static
-    {
-        $this->status = $status;
 
         return $this;
     }
