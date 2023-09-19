@@ -42,6 +42,9 @@ class Probleme implements \JsonSerializable
     #[ORM\Column(nullable: true)]
     private ?bool $is_ok = false;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $prix_estimatif = null;
+
     public function __construct(){
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
@@ -171,7 +174,8 @@ class Probleme implements \JsonSerializable
             'updateAt' => $this->updatedAt,
             'bien' => $this->bien,
             'photoReclamations'=> $photos,
-            'utilisateur' => $this->utilisateur
+            'utilisateur' => $this->utilisateur,
+            'prix_estimatif' => $this->prix_estimatif
         ];
     }
 
@@ -183,6 +187,18 @@ class Probleme implements \JsonSerializable
     public function setIsOk(?bool $is_ok): static
     {
         $this->is_ok = $is_ok;
+
+        return $this;
+    }
+
+    public function getPrixEstimatif(): ?float
+    {
+        return $this->prix_estimatif;
+    }
+
+    public function setPrixEstimatif(float $prix_estimatif): static
+    {
+        $this->prix_estimatif = $prix_estimatif;
 
         return $this;
     }

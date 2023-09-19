@@ -16,6 +16,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Message\SendEmailNotification;
+use Symfony\Component\Messenger\MessageBus;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[Route('/api', name: 'api_')]
 class CandidatureController extends AbstractController
@@ -73,7 +76,7 @@ class CandidatureController extends AbstractController
 
     #[Route('/candidature/accept/{id}', name: 'app_candidature_accept',methods: ['POST'])]
     public function accept(#[CurrentUser] User $user,EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
-    TypeTransactionRepository $typeTransactionRepository,CandidatureRepository $candidatureRepository,int $id): Response
+    TypeTransactionRepository $typeTransactionRepository,CandidatureRepository $candidatureRepository,int $id,MessageBusInterface $messageBus): Response
     {
         // $candidature = new Candidature();
         $transaction = new Transaction();
@@ -90,6 +93,8 @@ class CandidatureController extends AbstractController
         $periodeId = $bienPeriode->getId();
         $bienSomme = $bien->getPrix();
         if($bienUser->getEmail() == $user->getEmail()){
+            $candidatures = $candidatureRepository->findAllExceptThis($candidature->getId());
+            $candidatures->setIsCancel(true);
             $candidature->setIsAccepted(true);
             if($bienStatut === "A louer"){
                 $transaction->setTypeTransaction($typeLocation);
@@ -139,6 +144,7 @@ class CandidatureController extends AbstractController
             try {
 
                 $entityManager->persist($candidature);
+                $entityManager->persist($candidatures);
                 $entityManager->persist($transaction);
                 $entityManager->flush();
                 $entityManager->commit();
@@ -146,6 +152,12 @@ class CandidatureController extends AbstractController
             } catch (\Exception $e) {
                 $entityManager->rollback();
                 throw $e;
+            }
+            if ($transaction->getFiniAt() <= new \DateTimeImmutable()) {
+                $message = sprintf('La date de fin pour la transaction #%d est arrivée.', $transaction->getId());
+        
+                // Envoyez un message pour envoyer l'e-mail de rappel
+                $messageBus->dispatch(new SendEmailNotification($user->getId(), $message));
             }
             return $this->json(['message' => 'Candidature accepte'], Response::HTTP_OK);
         }

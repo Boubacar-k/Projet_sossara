@@ -38,7 +38,7 @@ class MessageController extends AbstractController
 
 
     #[Route('/message/{id}', name: 'app_message',methods: ['GET'])]
-    public function index(Request $request, Conversation $conversation): Response
+    public function index(Request $request, Conversation $conversation,SerializerInterface $serializer): Response
     {
         $this->denyAccessUnlessGranted('view',$conversation);
 
@@ -52,12 +52,16 @@ class MessageController extends AbstractController
             );
         },$messages);
 
-        return $this->json($messages, Response::HTTP_OK,[
-            'attributes' => self::ATTRIBUTES_TO_SERIALIZE
+        $messageSerialized = $serializer->serialize($messages,'json', [
+            'attributes' => ['id','content','createdAt','updateAt', 'mine','utilisateur'=>['nom','email','telephone','photo']]
         ]);
 
-        // $response = new Response(json_encode( array( 'message' => $messages,) ) );
-        // return $response;
+        // return $this->json($messages, Response::HTTP_OK,[
+        //     'attributes' => self::ATTRIBUTES_TO_SERIALIZE
+        // ]);
+
+        $response = new Response( $messageSerialized);
+        return $response;
     }
 
     #[Route('/message/new/{id}', name: 'app_new_message',methods: ['POST'])]

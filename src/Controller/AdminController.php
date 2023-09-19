@@ -10,6 +10,7 @@ use App\Entity\Pays;
 use App\Entity\Periode;
 use App\Entity\PhotoDocument;
 use App\Entity\Region;
+use App\Entity\Role;
 use App\Entity\TypeImmo;
 use App\Entity\TypeProbleme;
 use App\Entity\TypeTransaction;
@@ -66,19 +67,15 @@ class AdminController extends AbstractController
     
         if ($newRoles === 'PROPRIETAIRE') {
             $roles = $roleRepository->find(5);
-            // $user->setRoles(['ROLE_PROPRIETAIRE']);
             $user->addRole($roles);
         } elseif ($newRoles === 'ADMINISTRATEUR') {
             $roles = $roleRepository->find(2);
-            // $user->setRoles(['ROLE_ADMIN']);
             $user->addRole($roles);
         }elseif ($newRoles === 'AGENCE') {
             $roles = $roleRepository->find(3);
-            // $user->setRoles(['ROLE_AGENCE']);
             $user->addRole($roles);
         }elseif ($newRoles === 'LOCATAIRE OU ACHETEUR') {
             $roles = $roleRepository->find(6);
-            // $user->setRoles(['ROLE_LOCATAIRE']);
             $user->addRole($roles);
         }  else {
 
@@ -429,7 +426,7 @@ class AdminController extends AbstractController
     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
     public function getUserAgence(UserRepository $userRepository): Response
     {
-        $user = $userRepository->findUsersOfRoles(['ROLE_AGENCE']);
+        $user = $userRepository->findUsersOfRoles('ROLE_AGENCE');
         $response = new Response( json_encode( array( 'agences' => $user ) ) );
         return $response;
     }
@@ -1048,6 +1045,106 @@ class AdminController extends AbstractController
     {
         $periode = $periodeRepository->findAllExceptThis(6);
         $response = new Response(json_encode( array( 'periode' => $periode) ) );
+        return $response;
+    }
+
+    // CREER UN ROLE
+    #[Route('/role/add', name: 'app_add_new_role', methods: ['POST'])]
+    public function AddRole(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager): Response
+    {
+        $role = new Role();
+        $newRole = $request->request->get('name');
+        $role->setName(strtoupper($newRole));
+        if ($request->getMethod() == Request::METHOD_POST){
+            $entityManager->getConnection()->beginTransaction();
+            try {
+                $entityManager->persist($role);
+                $entityManager->flush();
+                $entityManager->commit();
+            } catch (\Exception $e) {
+                $entityManager->rollback();
+                throw $e;
+            }
+
+            return $this->json(['message' => 'Cree avec succes'], Response::HTTP_OK);
+        }
+        return $this->json([
+            'erreur' => "erreur de creation de periode",
+        ]);
+    }
+
+     // MODIFIER UN ROLE
+     #[Route('/role/update', name: 'app_add_update_role', methods: ['POST'])]
+     #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+     public function UpdateRole(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,RoleRepository $roleRepository,int $id): Response
+     {
+        $role = $roleRepository->find($id);
+        $newRole = $request->request->get('name');
+        $role->setName(strtoupper($newRole));
+         if ($request->getMethod() == Request::METHOD_POST){
+             $entityManager->getConnection()->beginTransaction();
+             try {
+                 $entityManager->persist($role);
+                 $entityManager->flush();
+                 $entityManager->commit();
+             } catch (\Exception $e) {
+                 $entityManager->rollback();
+                 throw $e;
+             }
+ 
+             return $this->json(['message' => 'Modification effectue avec succes'], Response::HTTP_OK);
+         }
+         return $this->json([
+             'erreur' => "erreur de Modification",
+         ]);
+    }
+
+    // AFFICHER LES ROLES
+    #[Route('/role/get', name: 'app_get_role')]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getRole(#[CurrentUser] User $user,RoleRepository $roleRepository): Response
+    {
+        $role = $roleRepository->findAll();
+        $response = new Response(json_encode( array( 'roles' => $role) ) );
+        return $response;
+    }
+
+
+    // LISTE DE TOUS LES BIENS EN LOCATION
+    #[Route('/bien/immo/get/rent', name: 'app_bien_immo_rent',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getBienRent(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+        $biens= [];
+
+            foreach ($bienImmo as $bien) {
+                $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                foreach($transaction as $transac){
+                    $biens[] = $transac;
+                }
+            }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
+        return $response;
+    }
+
+    // LISTE DE TOUS LES BIENS VENDU
+    #[Route('/bien/immo/get/sell', name: 'app_bien_immo_rent',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getBienSell(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,TransactionRepository $transactionRepository): Response
+    {
+        $bienImmo = $bienImmoRepository->findBy(['deletedAt' => null,'is_rent' => false,'is_sell' => true]);
+        $biens= [];
+
+            foreach ($bienImmo as $bien) {
+                $transaction = $transactionRepository->findBy(['bien'=>$bien,'isDeleted' => false]);
+                foreach($transaction as $transac){
+                    $biens[] = $transac;
+                }
+            }
+        
+        $response = new Response( json_encode( array( 'biens' => $biens) ) );
         return $response;
     }
 }

@@ -55,6 +55,7 @@ class SignalController extends AbstractController
         $probleme->setBien($bien);
         $probleme->setTypeProbleme($type);
         $probleme->setContenu($request->request->get('contenu'));
+        $probleme->setPrixEstimatif($request->request->get('prix_estimatif'));
 
         if ($request->files->has('photo')) {
             $images = $request->files->get('photo');
@@ -82,7 +83,7 @@ class SignalController extends AbstractController
                 throw $e;
             }
             $problemeSerialized = $serializer->serialize($probleme,'json', [
-                'attributes' => ['id','contenu','photoReclamations']
+                'attributes' => ['id','contenu','photoReclamations','prix_estimatif']
             ]);
             $update = new Update(
                 [

@@ -136,7 +136,8 @@ class Message implements \JsonSerializable
             'content' => $this->content,
             'createdAt' => $this->createdAt,
             'updateAt' => $this->updateAt,
-            'is_read' => $this->is_read
+            'is_read' => $this->is_read,
+            'utilisateur' => $this->utilisateur
         ];
     }
 
