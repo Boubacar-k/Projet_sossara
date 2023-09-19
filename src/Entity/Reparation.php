@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ReparationRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ReparationRepository::class)]
@@ -36,9 +38,13 @@ class Reparation implements \JsonSerializable
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     private ?Probleme $probleme = null;
 
+    #[ORM\OneToMany(mappedBy: 'reparation', targetEntity: PhotoJutificatif::class)]
+    private Collection $photoJutificatifs;
+
     public function __construct(){
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+        $this->photoJutificatifs = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -119,6 +125,13 @@ class Reparation implements \JsonSerializable
     }
 
     public function jsonSerialize() {
+        $photos = [];
+        foreach ($this->photoJutificatifs as $photo) {
+            $photos[] = [
+                'id' => $photo->getId(),
+                'nom' => $photo->getNom(),
+            ];
+        }
         return [
         'id' => $this->id,
         'bien' => $this->bien,
@@ -126,6 +139,7 @@ class Reparation implements \JsonSerializable
         'probleme'=> $this->probleme,
         'createdAt' => $this->createdAt,
         'updatedAt' => $this->updatedAt,
+        'photo' => $photos
     ];
 }
 
@@ -137,6 +151,36 @@ class Reparation implements \JsonSerializable
     public function setProbleme(?Probleme $probleme): static
     {
         $this->probleme = $probleme;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, PhotoJutificatif>
+     */
+    public function getPhotoJutificatifs(): Collection
+    {
+        return $this->photoJutificatifs;
+    }
+
+    public function addPhotoJutificatif(PhotoJutificatif $photoJutificatif): static
+    {
+        if (!$this->photoJutificatifs->contains($photoJutificatif)) {
+            $this->photoJutificatifs->add($photoJutificatif);
+            $photoJutificatif->setReparation($this);
+        }
+
+        return $this;
+    }
+
+    public function removePhotoJutificatif(PhotoJutificatif $photoJutificatif): static
+    {
+        if ($this->photoJutificatifs->removeElement($photoJutificatif)) {
+            // set the owning side to null (unless already changed)
+            if ($photoJutificatif->getReparation() === $this) {
+                $photoJutificatif->setReparation(null);
+            }
+        }
 
         return $this;
     }

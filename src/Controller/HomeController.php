@@ -105,7 +105,7 @@ class HomeController extends AbstractController
                     'userEmail' => $userEmail,
                     'password' => $password,
                     'confirmationUrl' => $confirmationUrl
-                ]);;
+                ]);
 
                 $mailer->send($endEmail);
             return $this->json(['message' => 'Agent ajouter avec succès','Email'=>$agent->getEmail(),'Mot_de_passe'=>$password]);
@@ -408,7 +408,7 @@ class HomeController extends AbstractController
     #[Route('/user/agence/get', name: 'app_get_agence',methods: ['GET'])]
     public function getUserAgence(UserRepository $userRepository,Request $request): Response
     {
-        $user = $userRepository->findUsersOfRoles(['ROLE_AGENCE']);
+        $user = $userRepository->findUsersOfRoles('ROLE_AGENCE');
         $response = new Response( json_encode( array( 'agences' => $user ) ) );
         return $response;
     }

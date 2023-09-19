@@ -66,20 +66,31 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
 //        ;
 //    }
 
-        public function findUsersOfRoles($roles)
+        // public function findUsersOfRoles($roles)
+        // {
+        //     $rsm = $this->createResultSetMappingBuilder('u');
+
+        //     $rawQuery = sprintf(
+        //         'SELECT %s
+        //                 FROM public.user u
+        //                 WHERE u.roles::jsonb ?? :role',
+        //         $rsm->generateSelectClause()
+        //     );
+
+        //     $query = $this->getEntityManager()->createNativeQuery($rawQuery, $rsm);
+        //     $query->setParameter('role', $roles);
+        //     return $query->getResult();
+        // }
+
+        public function findUsersOfRoles(string $role)
         {
-            $rsm = $this->createResultSetMappingBuilder('u');
-
-            $rawQuery = sprintf(
-                'SELECT %s
-                        FROM public.user u
-                        WHERE u.roles::jsonb ?? :role',
-                $rsm->generateSelectClause()
-            );
-
-            $query = $this->getEntityManager()->createNativeQuery($rawQuery, $rsm);
-            $query->setParameter('role', $roles);
-            return $query->getResult();
+            $qb = $this->createQueryBuilder('u');
+            $qb->join('u.roles', 'r')
+            ->where('r.name = :role')
+            ->setParameter('role', $role)
+            ->orderBy('u.id', 'DESC');
+    
+            return $qb->getQuery()->getResult();
         }
 
         public function findUsersWithParent()

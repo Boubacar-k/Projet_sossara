@@ -504,6 +504,7 @@ class BienImmoController extends AbstractController
         $response = new Response( json_encode( array( 'biens' => $biens) ) );
         return $response;
     }
+    
 
     //TOTAL DES BIENS LOUES
     #[Route('/bien/immo/get/rent/all', name: 'app_bien_immo_rent_all',methods: ['GET'])]

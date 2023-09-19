@@ -21,6 +21,14 @@ class CandidatureRepository extends ServiceEntityRepository
         parent::__construct($registry, Candidature::class);
     }
 
+    public function findAllExceptThis(int $id)
+    {
+        return $this->createQueryBuilder('c')
+            ->andWhere('c.id != :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->execute();
+    }
 //    /**
 //     * @return Candidature[] Returns an array of Candidature objects
 //     */

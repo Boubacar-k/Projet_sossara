@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\PhotoJutificatif;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -14,6 +15,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use App\Repository\BienImmoRepository;
 use App\Entity\User;
 use App\Entity\Reparation;
+use App\Service\FileUploader;
 
 #[Route('/api', name: 'api_')]
 class ReparationController extends AbstractController
@@ -31,7 +33,7 @@ class ReparationController extends AbstractController
 
         if($bienUser->getEmail() == $user->getEmail()){
             $reparation->setBien($biens);
-            $reparation->setSomme($data['somme']);
+            $reparation->setSomme($probleme->getPrixEstimatif());
             $reparation->setType($probleme->getTypeProbleme());
             $reparation->setProbleme($probleme);
             $probleme->setIsOk(true);
@@ -125,5 +127,59 @@ class ReparationController extends AbstractController
         }
     }
 
+    #[Route('/justificatif/{id}', name: 'app_justificatif',methods: ['POST'])]
+    public function refuse(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,ReparationRepository $reparationRepository,
+    int $id,FileUploader $fileUploader): Response
+    {
+        $reparation = $reparationRepository->find($id);
+        
+        if ($request->files->has('photo')) {
+            $images = $request->files->get('photo');
+            if ($images != null) {
+                foreach ($images as $image) {
+                    $imageFileName = $fileUploader->upload($image);
+                    
+                    $photo = new PhotoJutificatif();
+                    $photo->setNom($imageFileName);
+                    $reparation->addPhotoJutificatif($photo);
+                    $entityManager->persist($photo);
+                }
+            }
+        }
+        if ($request->getMethod() == Request::METHOD_POST){
+            $entityManager->getConnection()->beginTransaction();
+            try {
+
+                $entityManager->persist($reparation);
+                $entityManager->flush();
+                $entityManager->commit();
+                
+            } catch (\Exception $e) {
+                $entityManager->rollback();
+                throw $e;
+            }
+            return $this->json(['message' => 'justificatif envoyer'], Response::HTTP_OK);
+        }
+
+        return $this->json(['erreur' => 'L\'image n\'a pas ete bien charge']);
+    }
+
+    #[Route('/reparation/effectue/liste/get', name: 'getReparationEffectue',methods: ['GET'])]
+    public function getMyReparationEffectue(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,ReparationRepository $reparationRepository){
+
+        $bienImmo = $bienImmoRepository->findBy(['utilisateur'=>$user->getId(),'deletedAt' => null,'is_rent' => true,'is_sell' => false]);
+
+        $reparations= [];
+
+            foreach ($bienImmo as $bien) {
+                $reparationList = $reparationRepository->findBy(['bien'=>$bien->getId(),'is_ok' => true]);
+                foreach ($reparationList as $reparation) {
+                    $reparations[] = $reparation;
+                }
+            }
+
+        $response = new Response( json_encode( array( 'reparations' => $reparations) ) );
+        return $response;
+    }
 
 }
