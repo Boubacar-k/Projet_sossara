@@ -102,37 +102,12 @@ class ReparationController extends AbstractController
 
 
     #[Route('/reparation/confirmer/list/{id}', name: 'confirmer_reparation',methods: ['POST'])]
-    public function comfirm(#[CurrentUser] User $user,EntityManagerInterface $entityManager,ProblemeRepository $problemeRepository,
-    ReparationRepository $reparationRepository,int $id): Response
+    public function comfirm(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,ProblemeRepository $problemeRepository,
+    ReparationRepository $reparationRepository,int $id,FileUploader $fileUploader): Response
     {
-        $probleme = $problemeRepository->findBy(['utilisateur'=>$user->getId(),'is_ok' => true]);
-        foreach($probleme as $blem){
-            $reparation = $reparationRepository->findOneBy(['probleme' =>$blem->getId(),'id'=>$id,'is_ok' => false]);
-            $reparation->setIsOk(true);
-            $reparation->setUpdatedAt(new \DateTimeImmutable());
-
-            $entityManager->getConnection()->beginTransaction();
-            try {
-
-                $entityManager->persist($reparation);
-                $entityManager->flush();
-                $entityManager->commit();
-            } catch (\Exception $e) {
-                $entityManager->rollback();
-                throw $e;
-            }
-            return $this->json([
-                'message' => 'reparation enregistee avec succes',
-            ]);
-        }
-    }
-
-    #[Route('/justificatif/{id}', name: 'app_justificatif',methods: ['POST'])]
-    public function refuse(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,ReparationRepository $reparationRepository,
-    int $id,FileUploader $fileUploader): Response
-    {
-        $reparation = $reparationRepository->find($id);
-        
+        $reparation = $reparationRepository->findOneBy(['id'=>$id,'is_ok' => false]);
+        $reparation->setIsOk(true);
+        $reparation->setUpdatedAt(new \DateTimeImmutable());
         if ($request->files->has('photo')) {
             $images = $request->files->get('photo');
             if ($images != null) {
@@ -141,28 +116,65 @@ class ReparationController extends AbstractController
                     
                     $photo = new PhotoJutificatif();
                     $photo->setNom($imageFileName);
+                    $photo->setCreatedAt(new \DateTimeImmutable());
+                    $photo->setUpdatedAt(new \DateTimeImmutable());
                     $reparation->addPhotoJutificatif($photo);
                     $entityManager->persist($photo);
                 }
             }
         }
-        if ($request->getMethod() == Request::METHOD_POST){
-            $entityManager->getConnection()->beginTransaction();
-            try {
 
-                $entityManager->persist($reparation);
-                $entityManager->flush();
-                $entityManager->commit();
-                
-            } catch (\Exception $e) {
-                $entityManager->rollback();
-                throw $e;
-            }
-            return $this->json(['message' => 'justificatif envoyer'], Response::HTTP_OK);
+        $entityManager->getConnection()->beginTransaction();
+        try {
+
+            $entityManager->persist($reparation);
+            $entityManager->flush();
+            $entityManager->commit();
+        } catch (\Exception $e) {
+            $entityManager->rollback();
+            throw $e;
         }
-
-        return $this->json(['erreur' => 'L\'image n\'a pas ete bien charge']);
+        return $this->json([
+            'message' => 'reparation enregistee avec succes',
+        ]);
     }
+
+    // #[Route('/justificatif/{id}', name: 'app_justificatif',methods: ['POST'])]
+    // public function refuse(#[CurrentUser] User $user,Request $request,EntityManagerInterface $entityManager,ReparationRepository $reparationRepository,
+    // int $id,FileUploader $fileUploader): Response
+    // {
+    //     $reparation = $reparationRepository->find($id);
+        
+    //     if ($request->files->has('photo')) {
+    //         $images = $request->files->get('photo');
+    //         if ($images != null) {
+    //             foreach ($images as $image) {
+    //                 $imageFileName = $fileUploader->upload($image);
+                    
+    //                 $photo = new PhotoJutificatif();
+    //                 $photo->setNom($imageFileName);
+    //                 $reparation->addPhotoJutificatif($photo);
+    //                 $entityManager->persist($photo);
+    //             }
+    //         }
+    //     }
+    //     if ($request->getMethod() == Request::METHOD_POST){
+    //         $entityManager->getConnection()->beginTransaction();
+    //         try {
+
+    //             $entityManager->persist($reparation);
+    //             $entityManager->flush();
+    //             $entityManager->commit();
+                
+    //         } catch (\Exception $e) {
+    //             $entityManager->rollback();
+    //             throw $e;
+    //         }
+    //         return $this->json(['message' => 'justificatif envoyer'], Response::HTTP_OK);
+    //     }
+
+    //     return $this->json(['erreur' => 'L\'image n\'a pas ete bien charge']);
+    // }
 
     #[Route('/reparation/effectue/liste/get', name: 'getReparationEffectue',methods: ['GET'])]
     public function getMyReparationEffectue(#[CurrentUser] User $user,BienImmoRepository $bienImmoRepository,ReparationRepository $reparationRepository){

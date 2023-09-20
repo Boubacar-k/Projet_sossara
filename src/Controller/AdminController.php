@@ -57,7 +57,6 @@ class AdminController extends AbstractController
     EntityManagerInterface $entityManager,RoleRepository $roleRepository): Response
     {
         $user = new User();
-        $document = new Document();
 
         $user->setNom($request->request->get('nom'));
         $user->setEmail($request->request->get('email'));
@@ -90,35 +89,16 @@ class AdminController extends AbstractController
             $user->setPhoto($imageFileName);
         }
 
-        $user->setIsCertified(true);
+        $user->setIsCertified(false);
         $user->setIsVerified(true);
         $user->setCreatedAt(new \DateTimeImmutable());
         $user->setUpdateAt(new \DateTimeImmutable());
-
-        $document->setNumDoc($request->request->get('num_doc'));
-        $document->setNom($request->request->get('nom_doc'));
-        $images = $request->files->get('photo');
-        if ($images != null) {
-            foreach ($images as $image) {
-                $imageFileName = $fileUploader->upload($image);
-                
-                    $photo = new PhotoDocument();
-                    $photo->setNom($imageFileName);
-                    $photo->setCreatedAt(new \DateTimeImmutable());
-                    $photo->setUpdatedAt(new \DateTimeImmutable());
-                    $document->addPhotoDocument($photo);
-                    $entityManager->persist($photo);
-                }
-        }
-        
-        $user->addDocument($document);
 
         if ($request->getMethod() == Request::METHOD_POST){
             $entityManager->getConnection()->beginTransaction();
             try {
 
                 $entityManager->persist($user);
-                $entityManager->persist($document);
                 $entityManager->flush();
                 $entityManager->commit();
             } catch (\Exception $e) {
@@ -455,6 +435,29 @@ class AdminController extends AbstractController
         return $response;
     }
 
+    // LISTE DE TOUS LES UTILISATEURS
+    #[Route('/user/all/get', name: 'app_all_user_get',methods: ['GET'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function getAllUser (#[CurrentUser] User $user,UserRepository $userRepository): Response
+    {
+
+        $agent = $userRepository->findAll();
+        $data = [];
+        foreach ($agent as $user) {
+            $data[] = [
+                'id' => $user->getId(),
+                'username' => $user->getnom(),
+                'email' => $user->getEmail(),
+                'date_de_naissance' => $user->getDateNaissance(),
+                'telephone' => $user->getTelephone(),
+                'role' => $user->getRoles(),
+                'photo' => $user->getPhoto(),
+                'agence' => $user->getParent(),
+            ];
+        }
+        $response = new Response( json_encode( array( 'agents' => $data ) ) );
+        return $response;
+    }
      // CREER UN BLOG
      #[Route('/blog/add', name: 'app_add_new_blog', methods: ['POST'])]
      #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]

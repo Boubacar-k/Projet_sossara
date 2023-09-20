@@ -92,7 +92,7 @@ class ResetPassController extends AbstractController
                 $translator->trans($e->getReason(), [], 'ResetPasswordBundle')
             )]);
 
-            return $this->redirectToRoute('api_app_forgot_password_request');
+            return $this->redirectToRoute('api_app_reset_pass');
         }
 
         // The token is valid; allow the user to change their password.
@@ -137,7 +137,7 @@ class ResetPassController extends AbstractController
 
         // Do not reveal whether a user account was found or not.
         if (!$user) {
-            return new JsonResponse(['message' => 'No user found with this email.'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => 'Aucun utilisateur trouvé avec cet email.'], Response::HTTP_NOT_FOUND);
         }
 
         try {
@@ -153,7 +153,7 @@ class ResetPassController extends AbstractController
             //     $translator->trans($e->getReason(), [], 'ResetPasswordBundle')
             // ));
 
-            return $this->json(['message' => 'Error generating reset token.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['message' => 'Erreur generation de token.'], Response::HTTP_BAD_REQUEST);
         }
 
         
@@ -161,7 +161,7 @@ class ResetPassController extends AbstractController
             ->from(new Address('testappaddress00@gmail.com', 'Sossara Mail Bot'))
             ->to($user->getEmail())
             ->subject('Votre demande de réinitialisation de mot de passe')
-            ->htmlTemplate('reset_password/email_user.html.twig')
+            ->htmlTemplate('reset/index.html.twig')
             ->context([
                 'resetToken' => $resetToken,
             ])
@@ -173,6 +173,6 @@ class ResetPassController extends AbstractController
         // $this->setTokenObjectInSession($resetToken);
         $resetToken = $jwtManager->create($user);
 
-        return $this->json(['message' => 'Password reset email sent.','resetToken' => $resetToken], Response::HTTP_OK);
+        return $this->json(['message' => 'Email de réinitialisation du mot de passe envoyé.'], Response::HTTP_OK);
     }
 }

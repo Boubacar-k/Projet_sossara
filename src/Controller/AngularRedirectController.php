@@ -26,7 +26,7 @@ class AngularRedirectController extends AbstractController
         return $this->redirect($angularUrl);
     }
 
-    #[Route('/angular/user/redirect_to reset', name: 'app_angular_redirect_reset_user')]
+    #[Route('/angular/redirect_to/user', name: 'app_angular_redirect_reset_To_user')]
     public function redirectToAngularResetUser(Request $request): RedirectResponse
     {
         $token = $request->get('token');

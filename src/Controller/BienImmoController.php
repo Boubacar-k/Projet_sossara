@@ -35,6 +35,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileUploader;
+use Doctrine\ORM\EntityManager;
 use Symfony\Component\Security\Http\Attribute\IsGranted as AttributeIsGranted;
 
 #[Route('/api', name: 'api_')]
@@ -188,6 +189,29 @@ class BienImmoController extends AbstractController
             return $response;
         }
     }
+
+    // LISTE DES BIENS EN FONCTION DE TOUS LES PARAMETRES
+    // #[Route('/bien/immo/{region}/{commune}/{type}/{statut}', name: 'app_type_bien_immo')]
+    // public function show_by_params(EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,TypeImmoRepository $typeImmoRepository,
+    // int $regionId,int $communeId,int $type, string $statut,RegionRepository $regionRepository,
+    // CommuneRepository $communeRepository): Response
+    // {
+    //     $type = $typeImmoRepository->find($type);
+    //     $region = $regionRepository->find($regionId);
+    //     $commune = $communeRepository->find($communeId);
+    //     $biens = $entityManager->getRepository(BienImmo::class)->createQueryBuilder('o')
+    //        ->andWhere('o.statut LIKE :statut')
+    //        ->andWhere('o.deletedAt IS NULL')
+    //        ->andWhere('o.is_rent = false')
+    //        ->andWhere('o.is_sell = false')
+    //        ->setParameter('statut', '%'.$statut.'%')
+    //        ->getQuery()
+    //        ->getResult();
+    //     foreach($biens as $bien){
+    //         $response = new Response( json_encode( array( 'biens' => $bien ) ) );
+    //         return $response;
+    //     }
+    // }
     // LISTE DES BIENS EN FONCTION DE LA COMMUNE
     #[Route('/bien/immo/commune/{id}', name: 'app_bien_immo_commune')]
     public function show_by_commune(BienImmoRepository $bienImmoRepository,AdresseRepository $adresseRepository,CommuneRepository $communeRepository,int $id): Response
