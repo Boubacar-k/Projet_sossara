@@ -9,6 +9,7 @@ use App\Entity\Document;
 use App\Entity\Pays;
 use App\Entity\Periode;
 use App\Entity\PhotoDocument;
+use App\Entity\PhotoImmo;
 use App\Entity\Region;
 use App\Entity\Role;
 use App\Entity\TypeImmo;
@@ -16,6 +17,7 @@ use App\Entity\TypeProbleme;
 use App\Entity\TypeTransaction;
 use App\Entity\User;
 use App\Entity\UserAdresse;
+use App\Repository\AdresseRepository;
 use App\Repository\BienImmoRepository;
 use App\Repository\BlogRepository;
 use App\Repository\CommoditeRepository;
@@ -24,6 +26,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\PaysRepository;
 use App\Repository\PeriodeRepository;
 use App\Repository\PhotoDocumentRepository;
+use App\Repository\PhotoImmoRepository;
 use App\Repository\ProblemeRepository;
 use App\Repository\RegionRepository;
 use App\Repository\RoleRepository;
@@ -276,7 +279,7 @@ class AdminController extends AbstractController
     }
 
     // SUPPRIMER UN UTILISATEUR
-    #[Route('/user', name: 'app_admin',methods: ['POST'])]
+    #[Route('/user/delete/{id}', name: 'app_admin_user_delete',methods: ['POST'])]
     #[AttributeIsGranted("ROLE_SUPER_ADMIN")]
     public function index(#[CurrentUser] User $user, EntityManagerInterface $entityManager,UserRepository $userRepository,
     BienImmoRepository $bienImmoRepository,int $id,TransactionRepository $transactionRepository): Response
@@ -358,6 +361,8 @@ class AdminController extends AbstractController
         
         if($banishUser->isVerified() == true){
             $banishUser->setIsVerified(false);
+        }else{
+            $banishUser->setIsVerified(true);
         }
         $entityManager->getConnection()->beginTransaction();
         try {
@@ -399,6 +404,106 @@ class AdminController extends AbstractController
         $entityManager->flush();
 
         return $this->json(['message' => 'Suppression effectue succès'], Response::HTTP_OK);
+    }
+
+    // MODIFIER UN BIEN
+    #[Route('/bien/immo/update/{id}', name: 'update_bien_immo',methods: ['POST'])]
+    #[AttributeIsGranted(new Expression('is_granted("ROLE_SUPER_ADMIN") or is_granted("ROLE_ADMIN")'))]
+    public function UpdateBienImmo (#[CurrentUser] User $user, EntityManagerInterface $entityManager,BienImmoRepository $bienImmoRepository,
+    Request $request, CommuneRepository $communeRepository, TypeImmoRepository $typeImmoRepository, CommoditeRepository $commoditeRepository,
+    AdresseRepository $addresseRepository,PhotoImmoRepository $photoImmoRepository,PeriodeRepository $periodeRepository,FileUploader $fileUploader,int $id): Response
+    {
+
+        $bien = $bienImmoRepository->findOneBy(['id' => $id,'deletedAt' => null]);
+        if ($bien === null) {
+            return $this->json(['message' => 'Le bien n\'existe pas'], Response::HTTP_NOT_FOUND);
+        }
+        
+
+        $data = json_decode($request->getContent(), true);
+
+        $adresseId = $bien->getAdresse();
+
+        $commoditeId = $request->get('commodite');
+        $periodeId = $request->request->get('periode');
+        $typeId = $request->request->get('type');
+        $communeId = $request->request->get('commune');
+        $type = $typeImmoRepository->find($typeId);
+        $periode = $periodeRepository->find($periodeId);
+        $commune = $communeRepository->find($communeId);
+        $adresse = $addresseRepository->findOneBy(['id' => $adresseId]);
+        $photo = new PhotoImmo();
+
+        $bien->setNbPiece($request->request->get('nb_piece'));
+        $bien->setNom($request->request->get('nom'));
+        $bien->setChambre($request->request->get('chambre'));
+        $bien->setCuisine($request->request->get('cuisine'));
+        $bien->setToilette($request->request->get('toilette'));
+        $bien->setSurface($request->request->get('surface'));
+        $bien->setPrix($request->request->get('prix'));
+        $bien->setStatut($request->request->get('statut'));
+        $bien->setDescription($request->request->get('description'));
+
+        if($commoditeId !=null){
+            foreach ($commoditeId as $id) {
+                $commodite = $commoditeRepository->find($id);
+                
+                if ($commodite !== null) {
+                    $bien->addCommodite($commodite);
+                }
+            }
+        }else{
+            return $this->json(['message' => 'null est envoyer']);
+        }
+        $bien->setTypeImmo($type);
+        $bien->setPeriode($periode);
+        $bien->setUpdateAt(new \DateTimeImmutable());
+        if ($request->files->has('photo')) {
+            $images = $request->files->get('photo');
+            if ($images != null) {
+                foreach ($images as $image) {
+                    $imageFileName = $fileUploader->upload($image);
+                    
+                    $photos = $photoImmoRepository->findBy(['bien' => $bien->getId()]);
+                    foreach ($photos as $photo) {
+                        $photo->setNom($imageFileName);
+                        $bien->addPhotoImmo($photo);
+                        $entityManager->persist($photo);
+                    }
+                }
+            }
+        }
+        
+
+    
+        $adresse->setQuartier($request->request->get('quartier'));
+        $adresse->setRue($request->request->get('rue'));
+        $adresse->setPorte($request->request->get('porte'));
+        $adresse->setLongitude($request->request->get('longitude'));
+        $adresse->setLatitude($request->request->get('latitude'));
+        $adresse->setCommune($commune);
+
+        $bien->setAdresse($adresse);
+        $bien->setUtilisateur($user);
+
+
+        if ($request->getMethod() == Request::METHOD_POST) {
+            $entityManager->getConnection()->beginTransaction();
+            try {
+
+                $entityManager->persist($bien);
+                $entityManager->persist($adresse);
+                $entityManager->flush();
+                $entityManager->commit();
+                
+            } catch (\Exception $e) {
+                $entityManager->rollback();
+                throw $e;
+            }
+            return $this->json(['message' => 'Le bien a été mis a jour avec succès'], Response::HTTP_OK);
+        }
+
+        return $this->json(['message' => 'il y a une erreur ']);
     }
 
     // RETOURNER LA LISTE DES AGENCES
@@ -453,6 +558,8 @@ class AdminController extends AbstractController
                 'role' => $user->getRoles(),
                 'photo' => $user->getPhoto(),
                 'agence' => $user->getParent(),
+                'certification' =>$user->isIsCertified(),
+                'verifie' => $user->isVerified(),
             ];
         }
         $response = new Response( json_encode( array( 'agents' => $data ) ) );
@@ -621,11 +728,12 @@ class AdminController extends AbstractController
         $pays = $paysRepository->find($id);
         $region =  new Region();
         $region->setNom($request->request->get('nom'));
-        $region->setPays($pays);
+        $pays->addPay($region);
         if ($request->getMethod() == Request::METHOD_POST){
             $entityManager->getConnection()->beginTransaction();
             try {
                 $entityManager->persist($region);
+                $entityManager->persist($pays);
                 $entityManager->flush();
                 $entityManager->commit();
             } catch (\Exception $e) {
@@ -683,12 +791,13 @@ class AdminController extends AbstractController
     {
         $commnue = new Commune();
         $region = $regionRepository->find($id);
-        $commnue->setRegion($region);
         $commnue->setNom($request->request->get('nom'));
+        $region->addCommune($commnue);
         if ($request->getMethod() == Request::METHOD_POST){
             $entityManager->getConnection()->beginTransaction();
             try {
                 $entityManager->persist($commnue);
+                $entityManager->persist($region);
                 $entityManager->flush();
                 $entityManager->commit();
             } catch (\Exception $e) {
